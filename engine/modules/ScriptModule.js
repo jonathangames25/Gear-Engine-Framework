@@ -83,6 +83,7 @@ class ScriptModule {
 
     onFixedUpdate(dt) {
         this.scriptInstances.forEach((instances) => {
+            if (instances.length > 0 && instances[0].context.gameObject.enabled === false) return;
             instances.forEach(instance => {
                 if (instance.context.fixedUpdate) {
                     try {
@@ -97,6 +98,7 @@ class ScriptModule {
 
     onUpdate(dt) {
         this.scriptInstances.forEach((instances) => {
+            if (instances.length > 0 && instances[0].context.gameObject.enabled === false) return;
             instances.forEach(instance => {
                 if (instance.context.update) {
                     try {
@@ -128,6 +130,7 @@ class ScriptModule {
     }
 
     dispatchCollision(owner, other, started) {
+        if (!owner.enabled) return;
         const instances = this.scriptInstances.get(owner.id);
         if (!instances) return;
 
@@ -144,6 +147,7 @@ class ScriptModule {
     }
 
     dispatchTrigger(owner, other, started) {
+        if (!owner.enabled) return;
         const instances = this.scriptInstances.get(owner.id);
         if (!instances) return;
 

@@ -232,13 +232,37 @@ router.post('/gameobjects/:id/animations/play', (req, res) => {
 });
 
 // --- Scripting Routes ---
+router.post('/scripts', (req, res) => {
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const { fileName, content } = req.body;
+        if (!fileName || !content) {
+            return res.status(400).json({ status: 'error', message: 'Missing fileName or content' });
+        }
+        
+        const assetsPath = path.join(process.cwd(), 'assets');
+        if (!fs.existsSync(assetsPath)) {
+            fs.mkdirSync(assetsPath, { recursive: true });
+        }
+        
+        const filePath = path.join(assetsPath, fileName);
+        fs.writeFileSync(filePath, content);
+        res.json({ status: 'success', message: `Script ${fileName} saved to assets` });
+    } catch (e) {
+        res.status(500).json({ status: 'error', message: e.message });
+    }
+});
+
 router.post('/gameobjects/:id/scripts', (req, res) => {
     const go = GameObjectModule.getGameObject(req.params.id);
     if (!go) return res.status(404).json({ status: 'error', message: 'GameObject not found' });
 
     const instance = ScriptModule.attachScript(go, req.body.fileName);
     if (instance) {
-        go.scripts.push(req.body.fileName);
+        if (!go.scripts.includes(req.body.fileName)) {
+            go.scripts.push(req.body.fileName);
+        }
         res.json({ status: 'success', message: 'Script attached successfully', data: instance.fileName });
     } else {
         res.status(400).json({ status: 'error', message: 'Failed to attach script' });
@@ -444,7 +468,8 @@ router.get('/sync', (req, res) => {
             position: body.translation(),
             rotation: body.rotation(),
             scale: go.mesh.scale,
-            visible: go.mesh.visible,
+            enabled: go.enabled,
+            visible: go.enabled && go.mesh.visible,
             material: mat || { color: '#ffffff' },
             currentAnimation: go.currentAnimation
         };

@@ -73,12 +73,37 @@ curl -X POST "$API_URL/gameobjects" \
   }'
 ```
 
-### Scripting Attachment
-Attach logic files found in the `assets/` folder.
+### 📂 Script Management (`/scripts`)
+Save logic files directly to the engine's asset folder via API.
+```bash
+curl -X POST "$API_URL/scripts" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fileName": "rotation_logic.js",
+    "content": "function update(dt) { gameObject.rotate({x:0, y:1, z:0}, 50 * dt); }"
+  }'
+```
+
+### 🔗 Scripting Attachment
+Attach logic files found in the `assets/` folder to a specific GameObject.
 ```bash
 curl -X POST "$API_URL/gameobjects/[ID]/scripts" \
   -H "Content-Type: application/json" \
-  -d '{"fileName": "sphere_script.js"}'
+  -d '{"fileName": "rotation_logic.js"}'
+```
+
+### 👁️ Visibility & Mastery (`/gameobjects`)
+- `enabled`: `false` disables logic, physics, and hides the mesh.
+- `mesh.visible`: `false` hides the mesh but keeps physics (colliders) active.
+
+```bash
+# Hide mesh but keep collider active
+curl -X PATCH "$API_URL/gameobjects/[ID]" \
+  -d '{"mesh": {"visible": false}}'
+
+# Disable entire GameObject (logic + physics + mesh)
+curl -X PATCH "$API_URL/gameobjects/[ID]" \
+  -d '{"enabled": false}'
 ```
 
 ---

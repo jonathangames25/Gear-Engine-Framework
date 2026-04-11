@@ -70,10 +70,15 @@ class GameObjectModule {
         }
         
         const collider = physicsModule.createCollider(colliderShape, rigidBody, colliderParams);
+        
+        if (params.enabled === false) {
+            rigidBody.setEnabled(false);
+        }
 
         const gameObject = {
             id,
             name,
+            enabled: params.enabled !== undefined ? params.enabled : true,
             physics: {
                 bodyHandle: Number(rigidBody.handle),
                 colliderHandle: Number(collider.handle),
@@ -183,9 +188,15 @@ class GameObjectModule {
                 Object.assign(go.physics, updates.physics);
             }
             
-            // Handle mesh updates
             if (updates.mesh) {
                 Object.assign(go.mesh, updates.mesh);
+            }
+            
+            if (updates.enabled !== undefined) {
+                go.enabled = updates.enabled;
+                if (body) {
+                    body.setEnabled(go.enabled);
+                }
             }
 
             if (updates.currentAnimation !== undefined) go.currentAnimation = updates.currentAnimation;
