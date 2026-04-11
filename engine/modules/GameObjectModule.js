@@ -117,6 +117,91 @@ class GameObjectModule {
         }
 
         this.gameObjects.set(id, gameObject);
+
+        // --- Scripting Proxies ---
+        // These allow scripts to do: gameObject.position.x = 10;
+        // and have it automatically sync with the physics body.
+        
+        const syncPhysics = () => {
+            const body = physicsModule.world.getRigidBody(gameObject.physics.bodyHandle);
+            if (body) {
+                body.setTranslation(gameObject.physics.position, true);
+                body.setRotation(gameObject.physics.rotation, true);
+            }
+        };
+
+        const posProxy = new Proxy(gameObject.physics.position, {
+            set(target, prop, value) {
+                target[prop] = value;
+                syncPhysics();
+                return true;
+            }
+        });
+
+        const rotProxy = new Proxy(gameObject.physics.rotation, {
+            set(target, prop, value) {
+                target[prop] = value;
+                syncPhysics();
+                return true;
+            }
+        });
+
+        Object.defineProperty(gameObject, 'position', {
+            get: () => posProxy,
+            set: (v) => { 
+                Object.assign(gameObject.physics.position, v);
+                syncPhysics();
+            }
+        });
+
+        Object.defineProperty(gameObject, 'rotation', {
+            get: () => rotProxy,
+            set: (v) => { 
+                Object.assign(gameObject.physics.rotation, v);
+                syncPhysics();
+            }
+        });
+
+        Object.defineProperty(gameObject, 'scale', {
+            get: () => gameObject.physics.scale,
+            set: (v) => { 
+                Object.assign(gameObject.physics.scale, v);
+                // Trigger collider update if scale changes
+                this.updateGameObject(gameObject.id, { physics: { colliderScale: v } });
+            }
+        });
+
+        // Helper methods for scripts
+        gameObject.setEnabled = (enabled) => {
+            this.updateGameObject(gameObject.id, { enabled });
+        };
+
+        gameObject.lookAt = (targetPos) => {
+            const currentPos = gameObject.position;
+            const dx = targetPos.x - currentPos.x;
+            const dy = targetPos.y - currentPos.y;
+            const dz = targetPos.z - currentPos.z;
+            
+            const angle = Math.atan2(dx, dz);
+            const halfAngle = angle * 0.5;
+            gameObject.rotation = {
+                x: 0,
+                y: Math.sin(halfAngle),
+                z: 0,
+                w: Math.cos(halfAngle)
+            };
+        };
+
+        gameObject.applyImpulse = (impulse) => {
+            const body = physicsModule.world.getRigidBody(gameObject.physics.bodyHandle);
+            if (body) body.applyImpulse(impulse, true);
+        };
+
+        gameObject.setLinearVelocity = (vel) => {
+            const body = physicsModule.world.getRigidBody(gameObject.physics.bodyHandle);
+            if (body) body.setLinvel(vel, true);
+        };
+
         return gameObject;
     }
 

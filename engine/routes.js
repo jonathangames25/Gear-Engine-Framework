@@ -486,6 +486,51 @@ router.get('/sync', (req, res) => {
 });
 
 
+// --- Source Code Inspection ---
+router.get('/source', (req, res) => {
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const { module: moduleName } = req.query;
+        
+        if (!moduleName) {
+            return res.status(400).json({ status: 'error', message: 'Missing module parameter. Example: ?module=GameObjectModule' });
+        }
+
+        const enginePath = path.join(process.cwd(), 'engine');
+        const modulesPath = path.join(enginePath, 'modules');
+        
+        let filePath = null;
+        
+        // Search in engine root and engine/modules
+        const possiblePaths = [
+            path.join(enginePath, `${moduleName}.js`),
+            path.join(modulesPath, `${moduleName}.js`),
+            path.join(process.cwd(), moduleName) // Absolute or relative path if provided
+        ];
+
+        for (const p of possiblePaths) {
+            if (fs.existsSync(p) && fs.lstatSync(p).isFile()) {
+                // Security check: ensure path is within process.cwd()
+                if (p.startsWith(process.cwd())) {
+                    filePath = p;
+                    break;
+                }
+            }
+        }
+
+        if (filePath) {
+            const content = fs.readFileSync(filePath, 'utf8');
+            res.json({ status: 'success', module: moduleName, path: filePath, source: content });
+        } else {
+            res.status(404).json({ status: 'error', message: `Module or file ${moduleName} not found or access denied.` });
+        }
+    } catch (e) {
+        res.status(500).json({ status: 'error', message: e.message });
+    }
+});
+
+
 // --- LLM Help Route ---
 router.get('/help', (req, res) => {
     try {
@@ -508,9 +553,17 @@ router.get('/help', (req, res) => {
                 "physics_priority": "CRITICAL: Physics is the source of truth. Moving objects via PATCH /api/gameobjects updates the underlying Rapier3D rigid body.",
                 "coordinate_system": "Right-handed, Y-up. Units in meters. Rotations are Quaternions {x,y,z,w}."
             },
+            scripting_examples: {
+                "Movement": "function update(dt) { gameObject.position.y += 1 * dt; }",
+                "Input": "function update(dt) { if(InputModule.isKeyDown('KeyW')) gameObject.position.z -= 5 * dt; }",
+                "Collision": "function onCollisionEnter(other) { console.log('Hit ' + other.name); }",
+                "Activation": "function onStart() { setTimeout(() => gameObject.setEnabled(false), 2000); }",
+                "LookAt": "function update(dt) { const player = GameObjectModule.getGameObject('player-id'); if(player) gameObject.lookAt(player.position); }"
+            },
             endpoints: {
                 "GET /api/help": "This comprehensive agentic reference.",
                 "GET /api/sync": "Real-time physics state of all objects.",
+                "GET /api/source?module=ModuleName": "View the engine source code for any module (e.g., GameObjectModule, PhysicsModule).",
                 "POST /api/scenes/export": "Persist the current workspace to assets.",
                 "POST /api/scenes/load": "Restore a workspace from assets.",
                 "GET /api/assets/scenes": "List all available scene files."

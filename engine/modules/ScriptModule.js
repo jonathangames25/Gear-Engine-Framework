@@ -53,6 +53,7 @@ class ScriptModule {
 
 
             // Events
+            onStart: null,
             update: null,
             fixedUpdate: null,
             onCollisionEnter: null,
@@ -69,6 +70,15 @@ class ScriptModule {
                 fileName: scriptFileName,
                 context: context
             };
+
+            // Run onStart immediately if defined
+            if (context.onStart) {
+                try {
+                    context.onStart();
+                } catch (e) {
+                    console.error(`Error in onStart of ${scriptFileName}:`, e);
+                }
+            }
 
             if (!this.scriptInstances.has(gameObject.id)) {
                 this.scriptInstances.set(gameObject.id, []);

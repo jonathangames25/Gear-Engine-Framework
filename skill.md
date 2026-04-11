@@ -249,27 +249,62 @@ curl -X POST "$API_URL/scenes/load" \
 
 ---
 
-## ⚡ 9. SCRIPTING API EXPOSURE
-Inside `.js` files in `assets/`, the following global objects are available for direct logic:
+## ⚡ 9. ADVANCED SCRIPTING GUIDE
+Scripts in Gear Engine are standard JavaScript files saved in `assets/`. They have access to the full engine API.
 
+### Essential Script Events
 ```javascript
-// Accessing Materials
-MaterialModule.updateMaterial('player_mat', { color: '#ffffff' });
+function onStart() {
+    // Called once when script is attached or scene loaded
+    console.log("Entity " + gameObject.name + " initialized!");
+    gameObject.position.y += 5; // Jump up on start
+}
 
-// Accessing Audio
-AudioModule.playSound('hit', 'hit_sfx.mp3', false, 1.0);
+function update(dt) {
+    // Called every frame (~60fps)
+    // dt is delta time in seconds
+    gameObject.position.x += 1 * dt; // Constant movement
+}
 
-// Physics Forces
-const body = PhysicsModule.world.getRigidBody(gameObject.physics.bodyHandle);
-body.applyImpulse({ x: 0, y: 10, z: 0 }, true);
+function onCollisionEnter(other) {
+    // Called when this object hits another collider
+    console.log("Collided with: " + other.name);
+}
 
-// Scene Manipulation
-const newBox = MeshModule.createPrimitive('box');
+function onTriggerEnter(other) {
+    // Called when this object enters a trigger zone
+    if (other.tag === 'Player') {
+        AudioModule.playSound('pickup', 'pop.mp3');
+        gameObject.setEnabled(false); // Deactive self (collectible)
+    }
+}
 ```
+
+### Scripting API Reference
+| API Object | Purpose | Example |
+| :--- | :--- | :--- |
+| `gameObject` | The object this script is attached to. | `gameObject.position.y += 1` |
+| `InputModule` | Check keyboard/mouse state. | `InputModule.isKeyDown('Space')` |
+| `PhysicsModule` | Apply forces/impulses. | `PhysicsModule.applyImpulse(gameObject.id, {x:0, y:5, z:0})` |
+| `GameObjectModule` | Find other objects. | `GameObjectModule.getGameObject('other-id')` |
+| `AudioModule` | Play sound effects. | `AudioModule.playSound('id', 'file.mp3')` |
+| `UIModule` | Update on-screen text/buttons. | `UIModule.updateElement('score', {label: '100'})` |
+
+### Pro-Tip: Accessing Module Source
+To understand exactly how a module works, use the Source API:
+`GET /api/source?module=PhysicsModule`
 
 ---
 
-## 🔎 10. DEBUGGING & SYNC
-- **Collider Gizmos**: `POST /api/colliders/gizmos` with `{ "enabled": true }` to see wireframes.
-- **State Sync**: `GET /api/sync` to get real-time positions of all physics-driven objects.
-- **Input Polling**: `POST /api/input` with current key/mouse state for custom manual controllers.
+## 🔎 10. SYSTEM & DEBUGGING
+- **State Sync**: `GET /api/sync` - Returns positions, rotations, and audio events for the renderer.
+- **Source Inspection**: `GET /api/source?module=[ModuleName]` - View engine internal code.
+- **Collider Gizmos**: `POST /api/colliders/gizmos` - Toggle physics wireframes.
+- **Input Polling**: `POST /api/input` - Update global input state.
+
+### Useful Modules for Source Inspection:
+- `GameObjectModule`: How objects are created and managed.
+- `PhysicsModule`: The Rapier3D integration.
+- `ScriptModule`: How JS scripts are executed.
+- `VehicleModule`: Car physics implementation.
+- `SceneModule`: Scene serialization/deserialization.
