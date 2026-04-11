@@ -1,5 +1,9 @@
 # ⚙️ Gear Engine Framework
 
+<p align="center">
+  <img src="assets/preview.png" alt="Gear Engine Framework Preview" width="100%">
+</p>
+
 ### *The Professional-Grade 3D Engine for AI-Driven World Building*
 
 Gear Engine Framework is a lightweight, high-performance 3D engine built specifically to be controlled by AI agents. By decoupling the physics simulation and game logic into a Node.js REST API and the visualization into an Electron-based Three.js renderer, Gear Engine allows AI agents to architect, simulate, and preview complex 3D environments in real-time.
