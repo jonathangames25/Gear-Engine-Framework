@@ -6,245 +6,95 @@ This guide provides the exhaustive command-set and usage patterns for the Gear E
 
 ## 🛠️ API Fundamentals
 - **Base URL**: `$API_URL = "http://127.0.0.1:3005/api"`
+- **Method Conventions**: `Get`, `Post`, `Patch`, `Delete`
 - **Headers**: `-ContentType "application/json"`
 
 ### 🤖 AI Self-Healing & Discovery
 > [!IMPORTANT]
 > - **404 Errors**: In the event that the Gear Engine base URL returns a **404** or appears unresponsive, a ping to `GET /api/gameobjects` **MUST** be performed immediately via `Invoke-RestMethod`. This confirms engine availability and retrieves the current scene's state.
 > - **Script Errors**: When errors are encountered during script execution or attachment, **NODE.JS LOGS MUST BE REQUESTED** from the terminal. Detailed error stacks are often output to the Node console and are not visible via the API.
-> - **FULL ACCESS**: For advanced logic, direct access to the **`THREE`** and **`RAPIER`** libraries is provided. These are to be used for custom math, complex physics queries, or direct engine manipulation.
+> - **Physics-First Workflow**: This engine is optimized for physics. Moving dynamic objects by setting `.position` directly is discouraged for gameplay; instead, **impulses and velocities** should be used to ensure Realistic Physics interaction.
+> - **Module Priority**: Always attempt to use built-in modules (`GameObjectModule`, `PhysicsModule`, etc.) before using raw **`THREE`** or **`RAPIER`** libraries. Raw libraries should only be used for high-complexity math or direct engine manipulation beyond module capabilities.
 
 ---
 
 ## ⚡ 1. SCRIPTING & LOGIC (`/scripts`)
-Scripts serve as the logic for GameObjects. They are standard JavaScript files saved in `assets/`.
 
-### 📂 Script Asset Management
-| Action | Method | Endpoint | Description |
-| :--- | :--- | :--- | :--- |
-| **Save/Create** | `Post` | `/scripts` | Save a new script or overwrite an existing one. |
-| **Edit** | `Patch` | `/scripts` | Update the content of an existing script. |
-| **Delete** | `Delete` | `/scripts/[fileName]` | Permanently remove a script from assets. |
+### 🧠 Modern Scripting Patterns (Physics-First)
 
-#### Example: Save/Edit Script
-```powershell
-Invoke-RestMethod -Uri "$API_URL/scripts" -Method Post -ContentType "application/json" -Body '{
-    "fileName": "rotation_logic.js",
-    "content": "function update(dt) { gameObject.rotate({x:0, y:1, z:0}, 50 * dt); }"
-}'
-```
-
-#### Example: Delete Script from Assets
-```powershell
-Invoke-RestMethod -Uri "$API_URL/scripts/rotation_logic.js" -Method Delete
-```
-
-### 🔗 Script Attachment & Detachment
-Attach or remove logic from specific GameObjects.
-
-| Action | Method | Endpoint |
-| :--- | :--- | :--- |
-| **Attach** | `Post` | `/gameobjects/[ID]/scripts` |
-| **Detach** | `Delete` | `/gameobjects/[ID]/scripts/[fileName]` |
-
-#### Example: Attach to Object
-```powershell
-Invoke-RestMethod -Uri "$API_URL/gameobjects/[ID]/scripts" -Method Post -ContentType "application/json" -Body '{"fileName": "rotation_logic.js"}'
-```
-
-#### Example: Detach from Object
-```powershell
-Invoke-RestMethod -Uri "$API_URL/gameobjects/[ID]/scripts/rotation_logic.js" -Method Delete
-```
-
-### 🧠 Essential Script Examples
-
-Scripts have access to a rich set of lifecycle methods and engine modules. Below are common patterns used in game development:
-
+#### Basic Player Controller (Physics Velocity)
 ```javascript
-/* 1. Basic Movement & Rotation */
 function update(dt) {
-    // Move forward along the Z axis at 5 units per second
-    gameObject.position.z -= 5 * dt; 
-    // Rotate continuously around the Y axis
-    gameObject.rotate({x: 0, y: 1, z: 0}, 90 * dt);
-}
-
-/* 2. Keyboard Input Handling */
-function update(dt) {
-    const speed = 10;
-    // Basic WASD movement
-    if (InputModule.isKeyDown('KeyW')) gameObject.position.z -= speed * dt;
-    if (InputModule.isKeyDown('KeyS')) gameObject.position.z += speed * dt;
-    if (InputModule.isKeyDown('KeyA')) gameObject.position.x -= speed * dt;
-    if (InputModule.isKeyDown('KeyD')) gameObject.position.x += speed * dt;
+    const speed = 5;
+    let vel = { x: 0, y: 0, z: 0 };
     
-    // Jump with Spacebar & check height (basic grounded check)
-    if (InputModule.isKeyDown('Space') && gameObject.position.y < 0.6) {
-        // Apply upward physics impulse
-        gameObject.applyImpulse({ x: 0, y: 5, z: 0 });
-    }
-}
-
-/* 3. Physics, Collisions, and Triggers */
-function onCollisionEnter(other) {
-    // Called when the rigid body hits another rigid body
-    if (other.tag === 'Enemy') {
-        console.log("Hit by enemy!");
-        gameObject.setEnabled(false); // Destroy/hide the object
-    }
-}
-
-function onTriggerEnter(other) {
-    // Called for overlapping sensor colliders
-    if (other.tag === 'Coin') {
-        console.log("Coin collected!");
-        other.setEnabled(false); // Consume the coin
-    }
-}
-
-/* 4. Timers and Prefab Spawning */
-let timer = 0;
-function update(dt) {
-    timer += dt;
-    if (timer > 2.0) { // Every 2 seconds
-        // Spawn a bullet prefab at current position
-        const bulletOffset = { x: gameObject.position.x, y: gameObject.position.y, z: gameObject.position.z - 1 };
-        GameObjectModule.instantiatePrefab('bullet.json', bulletOffset);
-        timer = 0;
-    }
-}
-
-/* 5. Tracking / LookAt */
-function update(dt) {
-    // Find player and rotate to face them
-    const player = GameObjectModule.getGameObject('player-id'); // Or use tagging system
-    if (player) {
-        gameObject.lookAt(player.position);
-    }
-}
-
-/* 6. Direct Access to THREE & RAPIER */
-function update(dt) {
-    // Using THREE.js for complex vector distance calculations
-    const targetPos = new THREE.Vector3(10, 0, 10);
-    const myPos = new THREE.Vector3(gameObject.position.x, gameObject.position.y, gameObject.position.z);
+    if (InputModule.isKeyDown('KeyW')) vel.z = -speed;
+    if (InputModule.isKeyDown('KeyS')) vel.z = speed;
+    if (InputModule.isKeyDown('KeyA')) vel.x = -speed;
+    if (InputModule.isKeyDown('KeyD')) vel.x = speed;
     
-    if (myPos.distanceTo(targetPos) < 2.0) {
-        console.log("Within bounds!");
-    }
-
-    // Using RAPIER directly to cast a physical ray downward
-    const rayOrigin = { x: gameObject.position.x, y: gameObject.position.y, z: gameObject.position.z };
-    const rayDir = { x: 0.0, y: -1.0, z: 0.0 };
-    const maxToi = 4.0; 
-    const solid = true;
+    gameObject.setLinearVelocity(vel);
     
-    const ray = new RAPIER.Ray(rayOrigin, rayDir);
-    
-    // Cast ray against the physical world
-    const hit = PhysicsModule.world.castRay(ray, maxToi, solid);
-    if (hit != null) {
-        // Retrieve the actual GameObject hit by the ray
-        const hitGO = GameObjectModule.getGameObjectByColliderHandle(hit.collider.handle());
-        if (hitGO) {
-            console.log("Ray hit object:", hitGO.name, "at distance:", hit.toi);
-        }
+    if (InputModule.isKeyDown('Space') && Math.abs(gameObject.position.y) < 0.1) {
+        gameObject.applyImpulse({ x: 0, y: 10, z: 0 });
     }
 }
+```
+
+#### Advanced Physics Rotation
+```javascript
+function update(dt) {
+    // Apply angular velocity to spin the object
+    gameObject.setAngularVelocity({ x: 0, y: 5, z: 0 });
+}
+```
+
+#### Module Helpers (Spawning)
+```javascript
+function update(dt) {
+    if (InputModule.isKeyDown('KeyF')) {
+        const spawnPos = { x: gameObject.position.x, y: gameObject.position.y + 1, z: gameObject.position.z };
+        GameObjectModule.instantiatePrefab('bullet.json', spawnPos);
+    }
+}
+```
+
+### 📂 Asset Management Examples
+```powershell
+# Save a script
+Invoke-RestMethod -Uri "$API_URL/scripts" -Method Post -Body '{"fileName": "logic.js", "content": "..."}'
+
+# Attach to GameObject
+Invoke-RestMethod -Uri "$API_URL/gameobjects/[ID]/scripts" -Method Post -Body '{"fileName": "logic.js"}'
 ```
 
 ---
 
 ## 📦 2. GAMEOBJECT MODULE (`/gameobjects`)
-GameObjects combine meshes, physics, and scripting.
 
 ### List All Active Objects
 ```powershell
 Invoke-RestMethod -Uri "$API_URL/gameobjects" -Method Get
 ```
 
-### Creating Objects
+### Creating Complex Objects
 ```powershell
 # Character (Kinematic)
-Invoke-RestMethod -Uri "$API_URL/gameobjects" -Method Post -ContentType "application/json" -Body '{"name": "Player", "modelUrl": "Soldier.glb", "isCharacter": true}'
+Invoke-RestMethod -Uri "$API_URL/gameobjects" -Method Post -Body '{"name": "Player", "modelUrl": "Soldier.glb", "isCharacter": true, "position": {"x": 0, "y": 2, "z": 0}}'
 
-# Rigid Body (Dynamic)
-Invoke-RestMethod -Uri "$API_URL/gameobjects" -Method Post -ContentType "application/json" -Body '{"name": "Crate", "primitive": "box", "type": "dynamic", "position": {"y": 5}}'
+# Dynamic Physics Box
+Invoke-RestMethod -Uri "$API_URL/gameobjects" -Method Post -Body '{"name": "Box", "primitive": "cube", "type": "dynamic", "position": {"y": 10}}'
 ```
 
 ---
 
-## 🎨 3. MATERIAL MODULE (`/materials`)
+## 🏎️ 3. VEHICLE PHYSICS (`/vehicles`)
 ```powershell
-Invoke-RestMethod -Uri "$API_URL/materials" -Method Post -ContentType "application/json" -Body '{
-    "id": "gold_metal",
-    "props": {
-      "color": "#ffd700",
-      "metalness": 0.9,
-      "roughness": 0.1
-    }
-}'
+Invoke-RestMethod -Uri "$API_URL/vehicles/player_car/control" -Method Patch -Body '{"engineForce": 1000.0, "steering": 0.5}'
 ```
 
 ---
 
-## 🎥 4. CAMERA MODULE (`/cameras`)
-```powershell
-Invoke-RestMethod -Uri "$API_URL/cameras" -Method Post -ContentType "application/json" -Body '{
-    "name": "MainFollow",
-    "type": "follow",
-    "targetId": "[GO_ID]",
-    "offset": {"x": 0, "y": 5, "z": 10}
-}'
-```
-
----
-
-## 🏎️ 5. VEHICLE PHYSICS (`/vehicles`)
-```powershell
-# Create
-Invoke-RestMethod -Uri "$API_URL/vehicles" -Method Post -ContentType "application/json" -Body '{"id": "car", "chassisId": "[GO_ID]", "config": {...}}'
-
-# Drive
-Invoke-RestMethod -Uri "$API_URL/vehicles/car/control" -Method Patch -ContentType "application/json" -Body '{"engineForce": 500.0, "steering": 0.2}'
-```
-
----
-
-## 💡 6. LIGHT MODULE (`/lights`)
-```powershell
-Invoke-RestMethod -Uri "$API_URL/lights" -Method Post -ContentType "application/json" -Body '{"type": "directional", "intensity": 2.5, "color": "#ffffff"}'
-```
-
----
-
-## 🔊 7. AUDIO MODULE (`/audio`)
-```powershell
-Invoke-RestMethod -Uri "$API_URL/audio/play" -Method Post -ContentType "application/json" -Body '{"id": "bgm", "assetPath": "music.mp3", "loop": true}'
-```
-
----
-
-## 🌆 8. SKYBOX & ENVIRONMENT (`/skybox`)
-```powershell
-Invoke-RestMethod -Uri "$API_URL/skybox" -Method Post -ContentType "application/json" -Body '{"type": "equirectangular", "assetPath": "sky.hdr"}'
-```
-
----
-
-## 💾 9. SCENE PERSISTENCE (`/scenes`)
-```powershell
-# Export
-Invoke-RestMethod -Uri "$API_URL/scenes/export" -Method Post -ContentType "application/json" -Body '{"fileName": "save.json"}'
-
-# Load
-Invoke-RestMethod -Uri "$API_URL/scenes/load" -Method Post -ContentType "application/json" -Body '{"fileName": "save.json"}'
-```
-
----
-
-## 🔎 10. SYSTEM & DEBUGGING
-- **State Sync**: `Invoke-RestMethod -Uri "$API_URL/sync" -Method Get`
-- **Source Inspection**: `Invoke-RestMethod -Uri "$API_URL/source?module=[ModuleName]" -Method Get`
-- **Collider Gizmos**: `Invoke-RestMethod -Uri "$API_URL/colliders/gizmos" -Method Post -ContentType "application/json" -Body '{"enabled": true}'`
+## 🔎 4. SYSTEM & DEBUGGING
+- **Physics Debug**: `Invoke-RestMethod -Uri "$API_URL/colliders/gizmos" -Method Post -Body '{"enabled": true}'`
+- **Source Inspection**: `Invoke-RestMethod -Uri "$API_URL/source?module=GameObjectModule" -Method Get`

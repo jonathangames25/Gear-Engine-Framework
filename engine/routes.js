@@ -615,19 +615,19 @@ router.get('/help', (req, res) => {
             },
             llm_guidance: {
                 "ai_agent_workflow": "This engine is designed for closed-loop AI control: 1. Deploy changes via API. 2. Observe state via /api/sync or /api/gameobjects. 3. Export/Persist layouts via /api/scenes/export.",
-                "initial_discovery": "CRITICAL: In the event of a 404 or engine inactivity, a ping to GET /api/gameobjects MUST be performed to locate the active service path.",
-                "script_errors": "CRITICAL: When script errors are encountered, Node.js logs must be requested from the terminal for detailed stacks.",
-                "full_access": "SCRIPTS have direct access to THREE and RAPIER libraries. These are to be used for custom math and direct engine control.",
-                "physics_priority": "CRITICAL: Physics is the source of truth. Moving objects via PATCH /api/gameobjects updates the underlying Rapier3D rigid body.",
+                "initial_discovery": "CRITICAL: In the event of a 404 or engine inactivity, a ping to GET /api/gameobjects MUST be performed immediately to locate the active service path.",
+                "script_errors": "CRITICAL: When script errors are encountered, Node.js logs MUST be requested from the terminal for detailed stacks.",
+                "physics_first": "CRITICAL: This engine is physics-optimized. Avoid moving dynamic objects via .position; use .setLinearVelocity() or .applyImpulse() for realistic simulation.",
+                "module_priority": "CRITICAL: Always attempt to use built-in modules (GameObjectModule, PhysicsModule, etc.) before resorting to raw THREE or RAPIER access.",
                 "coordinate_system": "Right-handed, Y-up. Units in meters. Rotations are Quaternions {x,y,z,w}."
             },
             scripting_examples: {
-                "Movement & Rotation": "function update(dt) { gameObject.position.z += 5 * dt; gameObject.rotate({x:0, y:1, z:0}, 90 * dt); }",
-                "Input Handling": "function update(dt) { if(InputModule.isKeyDown('KeyW')) gameObject.position.z -= 5 * dt; if(InputModule.isKeyDown('Space')) gameObject.applyImpulse({x:0, y:5, z:0}); }",
-                "Collision & Triggers": "function onCollisionEnter(other) { if(other.tag==='Enemy') gameObject.setEnabled(false); }",
-                "Spawning (Prefabs)": "let t=0; function update(dt) { t+=dt; if(t>2) { GameObjectModule.instantiatePrefab('bullet.json', gameObject.position); t=0; } }",
-                "LookAt & Tracking": "function update(dt) { const target = GameObjectModule.getGameObject('player-id'); if(target) gameObject.lookAt(target.position); }",
-                "Direct THREE/RAPIER Usage": "function onStart() { const dir = new THREE.Vector3(0,1,0); const ray = new RAPIER.Ray(gameObject.position, dir); }"
+                "Physics Movement": "function update(dt) { const move = {x:0, y:0, z: -10}; gameObject.setLinearVelocity(move); }",
+                "Physics Rotation": "function update(dt) { gameObject.setAngularVelocity({x:0, y:5, z:0}); }",
+                "Impulse Jump": "function update(dt) { if(InputModule.isKeyDown('Space')) gameObject.applyImpulse({x:0, y:12, z:0}); }",
+                "Collision Tags": "function onCollisionEnter(other) { if(other.tag==='Lava') gameObject.position = {x:0, y:5, z:0}; }",
+                "Prefab Spawning": "function update(dt) { if(InputModule.isKeyDown('KeyF')) GameObjectModule.instantiatePrefab('bullet.json', gameObject.position); }",
+                "Raw Math Help": "function update(dt) { const myPos = new THREE.Vector3(gameObject.position.x, 0, gameObject.position.z); const dist = myPos.distanceTo(new THREE.Vector3(0,0,0)); }"
             },
             endpoints: {
                 "GET /api/help": "This comprehensive agentic reference.",

@@ -192,14 +192,32 @@ class GameObjectModule {
             };
         };
 
+        gameObject.setLinearVelocity = (vel) => {
+            const body = physicsModule.world.getRigidBody(gameObject.physics.bodyHandle);
+            if (body) body.setLinvel(vel, true);
+        };
+
+        gameObject.setAngularVelocity = (vel) => {
+            const body = physicsModule.world.getRigidBody(gameObject.physics.bodyHandle);
+            if (body) body.setAngvel(vel, true);
+        };
+
         gameObject.applyImpulse = (impulse) => {
             const body = physicsModule.world.getRigidBody(gameObject.physics.bodyHandle);
             if (body) body.applyImpulse(impulse, true);
         };
 
-        gameObject.setLinearVelocity = (vel) => {
+        gameObject.applyTorqueImpulse = (torque) => {
             const body = physicsModule.world.getRigidBody(gameObject.physics.bodyHandle);
-            if (body) body.setLinvel(vel, true);
+            if (body) body.applyTorqueImpulse(torque, true);
+        };
+
+        gameObject.move = (direction, amount) => {
+            this.move(gameObject.id, direction, amount);
+        };
+
+        gameObject.rotate = (axis, angleDegrees) => {
+            this.rotate(gameObject.id, axis, angleDegrees);
         };
 
         return gameObject;
