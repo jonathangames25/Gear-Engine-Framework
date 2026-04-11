@@ -15,6 +15,14 @@ class AppGUI {
         this.closeModalBtn = document.getElementById('close-modal');
         this.sceneList = document.getElementById('scene-list');
         
+        // Prompt Elements
+        this.promptModal = document.getElementById('prompt-modal');
+        this.promptTitle = document.getElementById('prompt-title');
+        this.promptMessage = document.getElementById('prompt-message');
+        this.promptInput = document.getElementById('prompt-input');
+        this.promptConfirm = document.getElementById('prompt-confirm');
+        this.promptCancel = document.getElementById('prompt-cancel');
+        
         this.init();
     }
 
@@ -41,7 +49,7 @@ class AppGUI {
             
             if (activeSceneData.status === 'success') {
                 const defaultName = (activeSceneData.data.name || 'default_scene').toLowerCase().replace(/ /g, '_');
-                let fileName = prompt('Enter filename to save as (e.g. level1.json):', defaultName + '.json');
+                let fileName = await this.showPrompt('Save Scene', 'Enter filename to save as (e.g. level1.json):', defaultName + '.json');
                 
                 if (!fileName) return; // Cancelled
                 if (!fileName.endsWith('.json')) fileName += '.json';
@@ -138,10 +146,9 @@ class AppGUI {
     }
 
     showNotification(message, type = 'info') {
-        // Simple notification overlay or console for now
+        // ... (existing notification logic)
         console.log(`[AppGUI] ${type.toUpperCase()}: ${message}`);
         
-        // We could build a toast system here
         const toast = document.createElement('div');
         toast.style.position = 'fixed';
         toast.style.bottom = '20px';
@@ -163,6 +170,46 @@ class AppGUI {
             toast.style.transition = 'opacity 0.5s';
             setTimeout(() => toast.remove(), 500);
         }, 3000);
+    }
+
+    showPrompt(title, message, defaultValue = '') {
+        return new Promise((resolve) => {
+            this.promptTitle.innerText = title;
+            this.promptMessage.innerText = message;
+            this.promptInput.value = defaultValue;
+            this.promptModal.classList.add('active');
+            this.promptInput.focus();
+            this.promptInput.select();
+
+            const cleanup = () => {
+                this.promptModal.classList.remove('active');
+                this.promptConfirm.onclick = null;
+                this.promptCancel.onclick = null;
+                window.removeEventListener('keydown', handleKeydown);
+            };
+
+            const handleKeydown = (e) => {
+                if (e.key === 'Enter') {
+                    cleanup();
+                    resolve(this.promptInput.value);
+                } else if (e.key === 'Escape') {
+                    cleanup();
+                    resolve(null);
+                }
+            };
+
+            this.promptConfirm.onclick = () => {
+                cleanup();
+                resolve(this.promptInput.value);
+            };
+
+            this.promptCancel.onclick = () => {
+                cleanup();
+                resolve(null);
+            };
+
+            window.addEventListener('keydown', handleKeydown);
+        });
     }
 }
 

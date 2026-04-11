@@ -325,3 +325,59 @@ header h1 {
     align-items: center;
     gap: 8px;
 }
+
+/* Prompt Modal Specifics */
+.prompt-content {
+    width: 350px !important;
+}
+
+.prompt-body {
+    padding: 20px;
+}
+
+.prompt-body p {
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.prompt-body input {
+    width: 100%;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 10px;
+    border-radius: 6px;
+    outline: none;
+}
+
+.prompt-body input:focus {
+    border-color: var(--accent);
+}
+
+.prompt-actions {
+    padding: 15px 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background: rgba(0,0,0,0.2);
+}
+
+.prompt-actions button {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+#prompt-cancel {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+#prompt-confirm {
+    background: var(--accent);
+    color: white;
+}
