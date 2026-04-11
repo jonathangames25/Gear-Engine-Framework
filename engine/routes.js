@@ -615,7 +615,9 @@ router.get('/help', (req, res) => {
             },
             llm_guidance: {
                 "ai_agent_workflow": "This engine is designed for closed-loop AI control: 1. Deploy changes via API. 2. Observe state via /api/sync or /api/gameobjects. 3. Export/Persist layouts via /api/scenes/export.",
-                "initial_discovery": "CRITICAL: If the Gear Engine base URL returns a 404 or looks inactive, ALWAYS ping GET /api/gameobjects to locate the active service path and verify the scene state.",
+                "initial_discovery": "CRITICAL: In the event of a 404 or engine inactivity, a ping to GET /api/gameobjects MUST be performed to locate the active service path.",
+                "script_errors": "CRITICAL: When script errors are encountered, Node.js logs must be requested from the terminal for detailed stacks.",
+                "full_access": "SCRIPTS have direct access to THREE and RAPIER libraries. These are to be used for custom math and direct engine control.",
                 "physics_priority": "CRITICAL: Physics is the source of truth. Moving objects via PATCH /api/gameobjects updates the underlying Rapier3D rigid body.",
                 "coordinate_system": "Right-handed, Y-up. Units in meters. Rotations are Quaternions {x,y,z,w}."
             },

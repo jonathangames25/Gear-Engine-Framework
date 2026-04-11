@@ -10,12 +10,14 @@ This guide provides the exhaustive command-set and usage patterns for the Gear E
 
 ### 🤖 AI Self-Healing & Discovery
 > [!IMPORTANT]
-> If the Gear Engine base URL returns a **404** or appears unresponsive, the AI **MUST** immediately ping `GET /api/gameobjects` via `Invoke-RestMethod`. This confirms the engine's availability and retrieves the current scene's state to locate the correct service path.
+> - **404 Errors**: In the event that the Gear Engine base URL returns a **404** or appears unresponsive, a ping to `GET /api/gameobjects` **MUST** be performed immediately via `Invoke-RestMethod`. This confirms engine availability and retrieves the current scene's state.
+> - **Script Errors**: When errors are encountered during script execution or attachment, **NODE.JS LOGS MUST BE REQUESTED** from the terminal. Detailed error stacks are often output to the Node console and are not visible via the API.
+> - **FULL ACCESS**: For advanced logic, direct access to the **`THREE`** and **`RAPIER`** libraries is provided. These are to be used for custom math, complex physics queries, or direct engine manipulation.
 
 ---
 
 ## ⚡ 1. SCRIPTING & LOGIC (`/scripts`)
-Scripts are the brain of your GameObjects. They are standard JavaScript files saved in `assets/`.
+Scripts serve as the logic for GameObjects. They are standard JavaScript files saved in `assets/`.
 
 ### 📂 Script Asset Management
 | Action | Method | Endpoint | Description |

@@ -1,6 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const THREE = require('three');
+const RAPIER = require('@dimforge/rapier3d-compat');
 
 class ScriptModule {
     constructor() {
@@ -49,6 +51,8 @@ class ScriptModule {
             LightModule,
             MeshModule,
             CollidersModule,
+            THREE,
+            RAPIER,
             console: console,
 
 
