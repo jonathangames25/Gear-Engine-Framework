@@ -522,6 +522,10 @@ class GameObjectModule {
 
         return newGo;
     }
+
+    getAllGameObjects() {
+        return Array.from(this.gameObjects.values());
+    }
 }
 
 module.exports = new GameObjectModule();

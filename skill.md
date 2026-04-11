@@ -6,12 +6,18 @@ This guide provides the exhaustive command-set and usage patterns for the Gear E
 
 ## 🛠️ API Fundamentals
 - **Base URL**: `http://127.0.0.1:3005/api`
-- **Method Conventions**: 
-  - `GET`: Query state.
-  - `POST`: Create or perform actions.
-  - `PATCH`: Update existing entities.
-  - `DELETE`: Remove entities.
+- **Method Conventions**: `GET`, `POST`, `PATCH`, `DELETE`
 - **Header**: `Content-Type: application/json`
+
+### 💻 Cross-Platform Terminal Usage
+- **Linux/macOS (curl)**:
+  `curl -X GET http://127.0.0.1:3005/api/gameobjects`
+- **Windows (PowerShell)**:
+  `Invoke-RestMethod -Uri http://127.0.0.1:3005/api/gameobjects -Method Get`
+
+### 🤖 AI Self-Healing & Discovery
+> [!IMPORTANT]
+> If the Gear Engine base URL returns a **404** or appears unresponsive, the AI **MUST** immediately ping `GET /api/gameobjects`. This confirms the engine's availability and retrieves the current scene's state to locate the correct service path.
 
 ---
 
@@ -42,6 +48,16 @@ curl -X POST "$API_URL/materials" \
 
 ## 📦 2. GAMEOBJECT MODULE (`/gameobjects`)
 GameObjects combine meshes, physics, and scripting.
+
+### List All Active Objects
+Always start by listing objects to understand the current scene context.
+```bash
+# Linux
+curl -X GET "$API_URL/gameobjects"
+
+# Windows (PowerShell)
+Invoke-RestMethod -Uri "$API_URL/gameobjects" -Method Get
+```
 
 ### Creating a Character (Player/NPC)
 Initializes a Kinematic Character Controller with specific gravity and interaction logic.

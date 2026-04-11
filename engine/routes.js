@@ -148,7 +148,10 @@ router.post('/scenes/load', async (req, res) => {
     }
 });
 
-// --- GameObject Routes ---
+router.get('/gameobjects', (req, res) => {
+    res.json({ status: 'success', data: GameObjectModule.getAllGameObjects() });
+});
+
 router.post('/gameobjects', (req, res) => {
     try {
         const go = GameObjectModule.createGameObject(req.body);
@@ -545,11 +548,16 @@ router.get('/help', (req, res) => {
 
         const help = {
             projectName: "Gear Engine",
-            description: "A professional-grade 3D engine built specifically as a robust tool for AI agents. It enables agentic control of 3D scenes, physics simulations, and live previews via a high-performance REST API. Optimized for automated world-building and iterative scene design.",
+            description: "A professional-grade 3D engine built specifically as a robust tool for AI agents. It enables agentic control of 3D scenes, physics simulations, and live previews via a high-performance REST API.",
             api_root: "/api",
             full_api_skill_reference: skillContent,
+            quick_start: {
+                linux: "curl -X GET http://127.0.0.1:3005/api/gameobjects",
+                windows: "Invoke-RestMethod -Uri http://127.0.0.1:3005/api/gameobjects -Method Get"
+            },
             llm_guidance: {
-                "ai_agent_workflow": "This engine is designed for closed-loop AI control: 1. Deploy changes via API. 2. Observe state via /api/sync. 3. Export/Persist layouts via /api/scenes/export.",
+                "ai_agent_workflow": "This engine is designed for closed-loop AI control: 1. Deploy changes via API. 2. Observe state via /api/sync or /api/gameobjects. 3. Export/Persist layouts via /api/scenes/export.",
+                "initial_discovery": "CRITICAL: If the Gear Engine base URL returns a 404 or looks inactive, ALWAYS ping GET /api/gameobjects to locate the active service path and verify the scene state.",
                 "physics_priority": "CRITICAL: Physics is the source of truth. Moving objects via PATCH /api/gameobjects updates the underlying Rapier3D rigid body.",
                 "coordinate_system": "Right-handed, Y-up. Units in meters. Rotations are Quaternions {x,y,z,w}."
             },
@@ -562,10 +570,10 @@ router.get('/help', (req, res) => {
             },
             endpoints: {
                 "GET /api/help": "This comprehensive agentic reference.",
-                "GET /api/sync": "Real-time physics state of all objects.",
-                "GET /api/source?module=ModuleName": "View the engine source code for any module (e.g., GameObjectModule, PhysicsModule).",
+                "GET /api/gameobjects": "Retrieve ALL active GameObjects in the current scene.",
+                "GET /api/sync": "Real-time physics state of all objects (optimized for renderers).",
+                "GET /api/source?module=ModuleName": "View the engine source code for any module.",
                 "POST /api/scenes/export": "Persist the current workspace to assets.",
-                "POST /api/scenes/load": "Restore a workspace from assets.",
                 "GET /api/assets/scenes": "List all available scene files."
             }
         };

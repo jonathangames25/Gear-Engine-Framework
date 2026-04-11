@@ -8,6 +8,10 @@ This guide provides the exhaustive command-set and usage patterns for the Gear E
 - **Base URL**: `$API_URL = "http://127.0.0.1:3005/api"`
 - **Headers**: `-ContentType "application/json"`
 
+### 🤖 AI Self-Healing & Discovery
+> [!IMPORTANT]
+> If the Gear Engine base URL returns a **404** or appears unresponsive, the AI **MUST** immediately ping `GET /api/gameobjects` via `Invoke-RestMethod`. This confirms the engine's availability and retrieves the current scene's state to locate the correct service path.
+
 ---
 
 ## 🎨 1. MATERIAL MODULE (`/materials`)
@@ -29,6 +33,12 @@ Invoke-RestMethod -Uri "$API_URL/materials" -Method Post -ContentType "applicati
 ---
 
 ## 📦 2. GAMEOBJECT MODULE (`/gameobjects`)
+
+### List All Active Objects
+Always start by listing objects to understand the current scene context.
+```powershell
+Invoke-RestMethod -Uri "$API_URL/gameobjects" -Method Get
+```
 
 ### Creating a Character
 ```powershell
