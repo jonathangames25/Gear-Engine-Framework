@@ -57,21 +57,82 @@ Invoke-RestMethod -Uri "$API_URL/gameobjects/[ID]/scripts" -Method Post -Content
 Invoke-RestMethod -Uri "$API_URL/gameobjects/[ID]/scripts/rotation_logic.js" -Method Delete
 ```
 
-### 🧠 Essential Script Events
+### 🧠 Essential Script Examples
+
+Scripts have access to a rich set of lifecycle methods and engine modules. Below are common patterns used in game development:
+
 ```javascript
-function onStart() {
-    // Called once when script is attached or scene loaded
-    console.log("Entity " + gameObject.name + " initialized!");
-}
-
+/* 1. Basic Movement & Rotation */
 function update(dt) {
-    // Called every frame (~60fps). dt is delta time in seconds.
-    gameObject.position.x += 1 * dt; 
+    // Move forward along the Z axis at 5 units per second
+    gameObject.position.z -= 5 * dt; 
+    // Rotate continuously around the Y axis
+    gameObject.rotate({x: 0, y: 1, z: 0}, 90 * dt);
 }
 
+/* 2. Keyboard Input Handling */
+function update(dt) {
+    const speed = 10;
+    // Basic WASD movement
+    if (InputModule.isKeyDown('KeyW')) gameObject.position.z -= speed * dt;
+    if (InputModule.isKeyDown('KeyS')) gameObject.position.z += speed * dt;
+    if (InputModule.isKeyDown('KeyA')) gameObject.position.x -= speed * dt;
+    if (InputModule.isKeyDown('KeyD')) gameObject.position.x += speed * dt;
+    
+    // Jump with Spacebar & check height (basic grounded check)
+    if (InputModule.isKeyDown('Space') && gameObject.position.y < 0.6) {
+        // Apply upward physics impulse
+        gameObject.applyImpulse({ x: 0, y: 5, z: 0 });
+    }
+}
+
+/* 3. Physics, Collisions, and Triggers */
 function onCollisionEnter(other) {
-    // Called when this object hits another collider
-    console.log("Collided with: " + other.name);
+    // Called when the rigid body hits another rigid body
+    if (other.tag === 'Enemy') {
+        console.log("Hit by enemy!");
+        gameObject.setEnabled(false); // Destroy/hide the object
+    }
+}
+
+function onTriggerEnter(other) {
+    // Called for overlapping sensor colliders
+    if (other.tag === 'Coin') {
+        console.log("Coin collected!");
+        other.setEnabled(false); // Consume the coin
+    }
+}
+
+/* 4. Timers and Prefab Spawning */
+let timer = 0;
+function update(dt) {
+    timer += dt;
+    if (timer > 2.0) { // Every 2 seconds
+        // Spawn a bullet prefab at current position
+        const bulletOffset = { x: gameObject.position.x, y: gameObject.position.y, z: gameObject.position.z - 1 };
+        GameObjectModule.instantiatePrefab('bullet.json', bulletOffset);
+        timer = 0;
+    }
+}
+
+/* 5. Tracking / LookAt */
+function update(dt) {
+    // Find player and rotate to face them
+    const player = GameObjectModule.getGameObject('player-id'); // Or use tagging system
+    if (player) {
+        gameObject.lookAt(player.position);
+    }
+}
+
+/* 6. Direct Access to THREE & RAPIER */
+function onStart() {
+    // Using THREE.js for complex vector math
+    const forward = new THREE.Vector3(0, 0, -1);
+    const rotationMatrix = new THREE.Matrix4().makeRotationY(Math.PI / 4);
+    forward.applyMatrix4(rotationMatrix);
+    
+    // Using RAPIER directly for custom physics queries
+    const ray = new RAPIER.Ray({ x: 0, y: 10, z: 0 }, { x: 0, y: -1, z: 0 });
 }
 ```
 

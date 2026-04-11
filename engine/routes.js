@@ -622,11 +622,12 @@ router.get('/help', (req, res) => {
                 "coordinate_system": "Right-handed, Y-up. Units in meters. Rotations are Quaternions {x,y,z,w}."
             },
             scripting_examples: {
-                "Movement": "function update(dt) { gameObject.position.y += 1 * dt; }",
-                "Input": "function update(dt) { if(InputModule.isKeyDown('KeyW')) gameObject.position.z -= 5 * dt; }",
-                "Collision": "function onCollisionEnter(other) { console.log('Hit ' + other.name); }",
-                "Activation": "function onStart() { setTimeout(() => gameObject.setEnabled(false), 2000); }",
-                "LookAt": "function update(dt) { const player = GameObjectModule.getGameObject('player-id'); if(player) gameObject.lookAt(player.position); }"
+                "Movement & Rotation": "function update(dt) { gameObject.position.z += 5 * dt; gameObject.rotate({x:0, y:1, z:0}, 90 * dt); }",
+                "Input Handling": "function update(dt) { if(InputModule.isKeyDown('KeyW')) gameObject.position.z -= 5 * dt; if(InputModule.isKeyDown('Space')) gameObject.applyImpulse({x:0, y:5, z:0}); }",
+                "Collision & Triggers": "function onCollisionEnter(other) { if(other.tag==='Enemy') gameObject.setEnabled(false); }",
+                "Spawning (Prefabs)": "let t=0; function update(dt) { t+=dt; if(t>2) { GameObjectModule.instantiatePrefab('bullet.json', gameObject.position); t=0; } }",
+                "LookAt & Tracking": "function update(dt) { const target = GameObjectModule.getGameObject('player-id'); if(target) gameObject.lookAt(target.position); }",
+                "Direct THREE/RAPIER Usage": "function onStart() { const dir = new THREE.Vector3(0,1,0); const ray = new RAPIER.Ray(gameObject.position, dir); }"
             },
             endpoints: {
                 "GET /api/help": "This comprehensive agentic reference.",
