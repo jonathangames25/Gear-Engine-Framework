@@ -14,59 +14,101 @@ This guide provides the exhaustive command-set and usage patterns for the Gear E
 
 ---
 
-## 🎨 1. MATERIAL MODULE (`/materials`)
+## ⚡ 1. SCRIPTING & LOGIC (`/scripts`)
+Scripts are the brain of your GameObjects. They are standard JavaScript files saved in `assets/`.
 
-### Create PBR Material
+### 📂 Script Asset Management
+| Action | Method | Endpoint | Description |
+| :--- | :--- | :--- | :--- |
+| **Save/Create** | `Post` | `/scripts` | Save a new script or overwrite an existing one. |
+| **Edit** | `Patch` | `/scripts` | Update the content of an existing script. |
+| **Delete** | `Delete` | `/scripts/[fileName]` | Permanently remove a script from assets. |
+
+#### Example: Save/Edit Script
+```powershell
+Invoke-RestMethod -Uri "$API_URL/scripts" -Method Post -ContentType "application/json" -Body '{
+    "fileName": "rotation_logic.js",
+    "content": "function update(dt) { gameObject.rotate({x:0, y:1, z:0}, 50 * dt); }"
+}'
+```
+
+#### Example: Delete Script from Assets
+```powershell
+Invoke-RestMethod -Uri "$API_URL/scripts/rotation_logic.js" -Method Delete
+```
+
+### 🔗 Script Attachment & Detachment
+Attach or remove logic from specific GameObjects.
+
+| Action | Method | Endpoint |
+| :--- | :--- | :--- |
+| **Attach** | `Post` | `/gameobjects/[ID]/scripts` |
+| **Detach** | `Delete` | `/gameobjects/[ID]/scripts/[fileName]` |
+
+#### Example: Attach to Object
+```powershell
+Invoke-RestMethod -Uri "$API_URL/gameobjects/[ID]/scripts" -Method Post -ContentType "application/json" -Body '{"fileName": "rotation_logic.js"}'
+```
+
+#### Example: Detach from Object
+```powershell
+Invoke-RestMethod -Uri "$API_URL/gameobjects/[ID]/scripts/rotation_logic.js" -Method Delete
+```
+
+### 🧠 Essential Script Events
+```javascript
+function onStart() {
+    // Called once when script is attached or scene loaded
+    console.log("Entity " + gameObject.name + " initialized!");
+}
+
+function update(dt) {
+    // Called every frame (~60fps). dt is delta time in seconds.
+    gameObject.position.x += 1 * dt; 
+}
+
+function onCollisionEnter(other) {
+    // Called when this object hits another collider
+    console.log("Collided with: " + other.name);
+}
+```
+
+---
+
+## 📦 2. GAMEOBJECT MODULE (`/gameobjects`)
+GameObjects combine meshes, physics, and scripting.
+
+### List All Active Objects
+```powershell
+Invoke-RestMethod -Uri "$API_URL/gameobjects" -Method Get
+```
+
+### Creating Objects
+```powershell
+# Character (Kinematic)
+Invoke-RestMethod -Uri "$API_URL/gameobjects" -Method Post -ContentType "application/json" -Body '{"name": "Player", "modelUrl": "Soldier.glb", "isCharacter": true}'
+
+# Rigid Body (Dynamic)
+Invoke-RestMethod -Uri "$API_URL/gameobjects" -Method Post -ContentType "application/json" -Body '{"name": "Crate", "primitive": "box", "type": "dynamic", "position": {"y": 5}}'
+```
+
+---
+
+## 🎨 3. MATERIAL MODULE (`/materials`)
 ```powershell
 Invoke-RestMethod -Uri "$API_URL/materials" -Method Post -ContentType "application/json" -Body '{
     "id": "gold_metal",
     "props": {
       "color": "#ffd700",
       "metalness": 0.9,
-      "roughness": 0.1,
-      "map": "gold_albedo.jpg",
-      "wireframe": false
+      "roughness": 0.1
     }
 }'
 ```
 
 ---
 
-## 📦 2. GAMEOBJECT MODULE (`/gameobjects`)
-
-### List All Active Objects
-Always start by listing objects to understand the current scene context.
-```powershell
-Invoke-RestMethod -Uri "$API_URL/gameobjects" -Method Get
-```
-
-### Creating a Character
-```powershell
-Invoke-RestMethod -Uri "$API_URL/gameobjects" -Method Post -ContentType "application/json" -Body '{
-    "name": "Player",
-    "modelUrl": "Soldier.glb",
-    "position": {"x": 0, "y": 2, "z": 0},
-    "isCharacter": true,
-    "tag": "player"
-}'
-```
-
-### Adding Rigid Bodies
-```powershell
-Invoke-RestMethod -Uri "$API_URL/gameobjects" -Method Post -ContentType "application/json" -Body '{
-    "name": "HeavyCrate",
-    "primitive": "box",
-    "type": "dynamic",
-    "position": {"x": -2, "y": 10, "z": 0},
-    "mesh": {"materialId": "crate_mat"}
-}'
-```
-
----
-
-## 🎥 3. CAMERA MODULE (`/cameras`)
-
-### Create Follow Camera
+## 🎥 4. CAMERA MODULE (`/cameras`)
 ```powershell
 Invoke-RestMethod -Uri "$API_URL/cameras" -Method Post -ContentType "application/json" -Body '{
     "name": "MainFollow",
@@ -76,100 +118,52 @@ Invoke-RestMethod -Uri "$API_URL/cameras" -Method Post -ContentType "application
 }'
 ```
 
-### Switch Active Camera
+---
+
+## 🏎️ 5. VEHICLE PHYSICS (`/vehicles`)
 ```powershell
-Invoke-RestMethod -Uri "$API_URL/cameras/active" -Method Post -ContentType "application/json" -Body '{"id": "[CAM_ID]"}'
+# Create
+Invoke-RestMethod -Uri "$API_URL/vehicles" -Method Post -ContentType "application/json" -Body '{"id": "car", "chassisId": "[GO_ID]", "config": {...}}'
+
+# Drive
+Invoke-RestMethod -Uri "$API_URL/vehicles/car/control" -Method Patch -ContentType "application/json" -Body '{"engineForce": 500.0, "steering": 0.2}'
 ```
 
 ---
 
-## 💡 4. LIGHT MODULE (`/lights`)
-
-### Add Lights
+## 💡 6. LIGHT MODULE (`/lights`)
 ```powershell
-# Directional Sun
-Invoke-RestMethod -Uri "$API_URL/lights" -Method Post -ContentType "application/json" -Body '{"type": "directional", "intensity": 2.5, "color": "#ffffff", "position": {"x": 10, "y": 20, "z": 10}}'
+Invoke-RestMethod -Uri "$API_URL/lights" -Method Post -ContentType "application/json" -Body '{"type": "directional", "intensity": 2.5, "color": "#ffffff"}'
 ```
 
 ---
 
-## 🔊 5. AUDIO MODULE (`/audio`)
-
-### Play & Volume
+## 🔊 7. AUDIO MODULE (`/audio`)
 ```powershell
-Invoke-RestMethod -Uri "$API_URL/audio/play" -Method Post -ContentType "application/json" -Body '{"id": "bg_music", "assetPath": "music.mp3", "loop": true, "volume": 0.3}'
-
-Invoke-RestMethod -Uri "$API_URL/audio/setVolume" -Method Post -ContentType "application/json" -Body '{"id": "bg_music", "volume": 1.0}'
+Invoke-RestMethod -Uri "$API_URL/audio/play" -Method Post -ContentType "application/json" -Body '{"id": "bgm", "assetPath": "music.mp3", "loop": true}'
 ```
 
 ---
 
-## 🌆 6. SKYBOX & ENVIRONMENT (`/skybox`)
-
-### Set HDR
+## 🌆 8. SKYBOX & ENVIRONMENT (`/skybox`)
 ```powershell
-Invoke-RestMethod -Uri "$API_URL/skybox" -Method Post -ContentType "application/json" -Body '{
-    "type": "equirectangular",
-    "assetPath": "venice_sunset_1k.hdr",
-    "intensity": 1.5
-}'
+Invoke-RestMethod -Uri "$API_URL/skybox" -Method Post -ContentType "application/json" -Body '{"type": "equirectangular", "assetPath": "sky.hdr"}'
 ```
 
 ---
 
-## 🖼️ 7. UI OVERLAY MODULE (`/ui`)
-
-### Create UI
+## 💾 9. SCENE PERSISTENCE (`/scenes`)
 ```powershell
-Invoke-RestMethod -Uri "$API_URL/ui" -Method Post -ContentType "application/json" -Body '{
-    "type": "button",
-    "id": "play_btn",
-    "props": {"label": "PLAY", "x": 100, "y": 100}
-}'
+# Export
+Invoke-RestMethod -Uri "$API_URL/scenes/export" -Method Post -ContentType "application/json" -Body '{"fileName": "save.json"}'
+
+# Load
+Invoke-RestMethod -Uri "$API_URL/scenes/load" -Method Post -ContentType "application/json" -Body '{"fileName": "save.json"}'
 ```
 
 ---
 
-## 💾 8. SCENE PERSISTENCE (`/scenes`)
-
-### Export / Load
-```powershell
-Invoke-RestMethod -Uri "$API_URL/scenes/export" -Method Post -ContentType "application/json" -Body '{"fileName": "world_v1.json"}'
-
-Invoke-RestMethod -Uri "$API_URL/scenes/load" -Method Post -ContentType "application/json" -Body '{"fileName": "world_v1.json"}'
-```
-
----
-
-## 🏎️ 9. VEHICLE PHYSICS (`/vehicles`)
-
-### Create Car
-```powershell
-Invoke-RestMethod -Uri "$API_URL/vehicles" -Method Post -ContentType "application/json" -Body '{
-    "id": "sports_car",
-    "chassisId": "[GO_ID]",
-    "config": {
-      "wheels": [
-        {"connectionPoint": {"x": -0.8, "y": 0, "z": -1.2}, "isFront": true, "radius": 0.4},
-        {"connectionPoint": {"x": 0.8, "y": 0, "z": -1.2}, "isFront": true, "radius": 0.4},
-        {"connectionPoint": {"x": -0.8, "y": 0, "z": 1.2}, "isFront": false, "radius": 0.4},
-        {"connectionPoint": {"x": 0.8, "y": 0, "z": 1.2}, "isFront": false, "radius": 0.4}
-      ]
-    }
-}'
-```
-
-### Drive Car
-```powershell
-Invoke-RestMethod -Uri "$API_URL/vehicles/sports_car/control" -Method Patch -ContentType "application/json" -Body '{
-    "engineForce": 500.0,
-    "steering": 0.2,
-    "fourWheelDrive": true
-}'
-```
-
----
-
-## ⚡ 10. DEBUGGING & SYNC
-- **Collider Gizmos**: `Invoke-RestMethod -Uri "$API_URL/colliders/gizmos" -Method Post -ContentType "application/json" -Body '{"enabled": true}'`
+## 🔎 10. SYSTEM & DEBUGGING
 - **State Sync**: `Invoke-RestMethod -Uri "$API_URL/sync" -Method Get`
+- **Source Inspection**: `Invoke-RestMethod -Uri "$API_URL/source?module=[ModuleName]" -Method Get`
+- **Collider Gizmos**: `Invoke-RestMethod -Uri "$API_URL/colliders/gizmos" -Method Post -ContentType "application/json" -Body '{"enabled": true}'`

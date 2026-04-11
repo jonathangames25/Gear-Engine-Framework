@@ -91,6 +91,19 @@ class ScriptModule {
         }
     }
 
+    detachScript(gameObject, scriptFileName) {
+        if (!this.scriptInstances.has(gameObject.id)) return false;
+
+        const instances = this.scriptInstances.get(gameObject.id);
+        const index = instances.findIndex(inst => inst.fileName === scriptFileName);
+
+        if (index !== -1) {
+            instances.splice(index, 1);
+            return true;
+        }
+        return false;
+    }
+
     onFixedUpdate(dt) {
         this.scriptInstances.forEach((instances) => {
             if (instances.length > 0 && instances[0].context.gameObject.enabled === false) return;

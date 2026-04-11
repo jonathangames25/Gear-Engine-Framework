@@ -251,7 +251,50 @@ router.post('/scripts', (req, res) => {
         
         const filePath = path.join(assetsPath, fileName);
         fs.writeFileSync(filePath, content);
-        res.json({ status: 'success', message: `Script ${fileName} saved to assets` });
+        res.json({ status: 'success', message: `Script ${fileName} saved/updated in assets` });
+    } catch (e) {
+        res.status(500).json({ status: 'error', message: e.message });
+    }
+});
+
+router.patch('/scripts', (req, res) => {
+    // Semantic alias for POST /scripts to represent "editing"
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const { fileName, content } = req.body;
+        if (!fileName || !content) {
+            return res.status(400).json({ status: 'error', message: 'Missing fileName or content' });
+        }
+        
+        const assetsPath = path.join(process.cwd(), 'assets');
+        const filePath = path.join(assetsPath, fileName);
+        
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ status: 'error', message: `Script ${fileName} not found` });
+        }
+
+        fs.writeFileSync(filePath, content);
+        res.json({ status: 'success', message: `Script ${fileName} updated successfully` });
+    } catch (e) {
+        res.status(500).json({ status: 'error', message: e.message });
+    }
+});
+
+router.delete('/scripts/:fileName', (req, res) => {
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const fileName = req.params.fileName;
+        const assetsPath = path.join(process.cwd(), 'assets');
+        const filePath = path.join(assetsPath, fileName);
+
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            res.json({ status: 'success', message: `Script ${fileName} deleted from assets` });
+        } else {
+            res.status(404).json({ status: 'error', message: `Script ${fileName} not found` });
+        }
     } catch (e) {
         res.status(500).json({ status: 'error', message: e.message });
     }
@@ -269,6 +312,21 @@ router.post('/gameobjects/:id/scripts', (req, res) => {
         res.json({ status: 'success', message: 'Script attached successfully', data: instance.fileName });
     } else {
         res.status(400).json({ status: 'error', message: 'Failed to attach script' });
+    }
+});
+
+router.delete('/gameobjects/:id/scripts/:fileName', (req, res) => {
+    const go = GameObjectModule.getGameObject(req.params.id);
+    if (!go) return res.status(404).json({ status: 'error', message: 'GameObject not found' });
+
+    const fileName = req.params.fileName;
+    const success = ScriptModule.detachScript(go, fileName);
+    
+    if (success) {
+        go.scripts = go.scripts.filter(s => s !== fileName);
+        res.json({ status: 'success', message: `Script ${fileName} detached successfully` });
+    } else {
+        res.status(404).json({ status: 'error', message: `Script ${fileName} not found on this GameObject` });
     }
 });
 
@@ -573,6 +631,10 @@ router.get('/help', (req, res) => {
                 "GET /api/gameobjects": "Retrieve ALL active GameObjects in the current scene.",
                 "GET /api/sync": "Real-time physics state of all objects (optimized for renderers).",
                 "GET /api/source?module=ModuleName": "View the engine source code for any module.",
+                "POST /api/scripts": "Save or overwrite a script file in assets.",
+                "PATCH /api/scripts": "Edit an existing script file in assets.",
+                "DELETE /api/scripts/:fileName": "Delete a script file from assets.",
+                "DELETE /api/gameobjects/:id/scripts/:fileName": "Detach a script from a specific GameObject.",
                 "POST /api/scenes/export": "Persist the current workspace to assets.",
                 "GET /api/assets/scenes": "List all available scene files."
             }
