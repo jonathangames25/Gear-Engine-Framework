@@ -13,6 +13,7 @@ This guide provides the exhaustive command-set and usage patterns for the Gear E
 > [!IMPORTANT]
 > - **404 Errors**: In the event that the Gear Engine base URL returns a **404** or appears unresponsive, a ping to `GET /api/gameobjects` **MUST** be performed immediately via `Invoke-RestMethod`. This confirms engine availability and retrieves the current scene's state.
 > - **Script Errors**: When errors are encountered during script execution or attachment, **NODE.JS LOGS MUST BE REQUESTED** from the terminal. Detailed error stacks are often output to the Node console and are not visible via the API.
+> - **Attachment Workflow**: A script **MUST** be saved to the engine via `POST /api/scripts` before any attempt is made to attach it to a GameObject. If a script attachment fails with a 400 error, it is often because the file does not exist in the `assets/` directory or contains syntax errors.
 > - **Physics-First Workflow**: This engine is optimized for physics. Moving dynamic objects by setting `.position` directly is discouraged for gameplay; instead, **impulses and velocities** should be used to ensure Realistic Physics interaction.
 > - **Module Priority**: Always attempt to use built-in modules (`GameObjectModule`, `PhysicsModule`, etc.) before using raw **`THREE`** or **`RAPIER`** libraries. Raw libraries should only be used for high-complexity math or direct engine manipulation beyond module capabilities.
 

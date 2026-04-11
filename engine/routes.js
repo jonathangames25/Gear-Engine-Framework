@@ -617,6 +617,7 @@ router.get('/help', (req, res) => {
                 "ai_agent_workflow": "This engine is designed for closed-loop AI control: 1. Deploy changes via API. 2. Observe state via /api/sync or /api/gameobjects. 3. Export/Persist layouts via /api/scenes/export.",
                 "initial_discovery": "CRITICAL: In the event of a 404 or engine inactivity, a ping to GET /api/gameobjects MUST be performed immediately to locate the active service path.",
                 "script_errors": "CRITICAL: When script errors are encountered, Node.js logs MUST be requested from the terminal for detailed stacks.",
+                "attachment_workflow": "A script MUST be saved via POST /api/scripts BEFORE attaching it to a GameObject. Failure to attach is usually due to missing files or syntax errors.",
                 "physics_first": "CRITICAL: This engine is physics-optimized. Avoid moving dynamic objects via .position; use .setLinearVelocity() or .applyImpulse() for realistic simulation.",
                 "module_priority": "CRITICAL: Always attempt to use built-in modules (GameObjectModule, PhysicsModule, etc.) before resorting to raw THREE or RAPIER access.",
                 "coordinate_system": "Right-handed, Y-up. Units in meters. Rotations are Quaternions {x,y,z,w}."
