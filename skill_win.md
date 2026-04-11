@@ -125,14 +125,32 @@ function update(dt) {
 }
 
 /* 6. Direct Access to THREE & RAPIER */
-function onStart() {
-    // Using THREE.js for complex vector math
-    const forward = new THREE.Vector3(0, 0, -1);
-    const rotationMatrix = new THREE.Matrix4().makeRotationY(Math.PI / 4);
-    forward.applyMatrix4(rotationMatrix);
+function update(dt) {
+    // Using THREE.js for complex vector distance calculations
+    const targetPos = new THREE.Vector3(10, 0, 10);
+    const myPos = new THREE.Vector3(gameObject.position.x, gameObject.position.y, gameObject.position.z);
     
-    // Using RAPIER directly for custom physics queries
-    const ray = new RAPIER.Ray({ x: 0, y: 10, z: 0 }, { x: 0, y: -1, z: 0 });
+    if (myPos.distanceTo(targetPos) < 2.0) {
+        console.log("Within bounds!");
+    }
+
+    // Using RAPIER directly to cast a physical ray downward
+    const rayOrigin = { x: gameObject.position.x, y: gameObject.position.y, z: gameObject.position.z };
+    const rayDir = { x: 0.0, y: -1.0, z: 0.0 };
+    const maxToi = 4.0; 
+    const solid = true;
+    
+    const ray = new RAPIER.Ray(rayOrigin, rayDir);
+    
+    // Cast ray against the physical world
+    const hit = PhysicsModule.world.castRay(ray, maxToi, solid);
+    if (hit != null) {
+        // Retrieve the actual GameObject hit by the ray
+        const hitGO = GameObjectModule.getGameObjectByColliderHandle(hit.collider.handle());
+        if (hitGO) {
+            console.log("Ray hit object:", hitGO.name, "at distance:", hit.toi);
+        }
+    }
 }
 ```
 
