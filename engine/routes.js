@@ -317,7 +317,8 @@ router.post('/materials', (req, res) => {
 });
 
 router.patch('/materials/:id', (req, res) => {
-    const mat = MaterialModule.updateMaterial(req.params.id, req.body);
+    const props = req.body.props || req.body;
+    const mat = MaterialModule.updateMaterial(req.params.id, props);
     if (mat) {
         res.json({ status: 'success', message: 'Material updated successfully', data: mat });
     } else {

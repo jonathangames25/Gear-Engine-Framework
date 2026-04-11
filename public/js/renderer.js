@@ -412,6 +412,9 @@ class Renderer {
 
                             if (state.material.metalness !== undefined) mesh.material.metalness = state.material.metalness;
                             if (state.material.roughness !== undefined) mesh.material.roughness = state.material.roughness;
+                            if (state.material.opacity !== undefined) mesh.material.opacity = state.material.opacity;
+                            if (state.material.transparent !== undefined) mesh.material.transparent = state.material.transparent;
+                            if (state.material.wireframe !== undefined) mesh.material.wireframe = state.material.wireframe;
                         }
 
                         // Improved Animation Sync
