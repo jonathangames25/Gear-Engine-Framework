@@ -2,8 +2,7 @@
 
 This guide provides the exhaustive command-set, module reference, and usage patterns for the Gear Engine. It is intended for AI agents to understand how to build full games using the REST API and Scripting system.
 
-**Base URL**: `http://127.0.0.1:3005`  
-**API Root**: `/api`  
+
 **Coordinate System**: Right-handed, Y-up. Units in meters. Rotations are Quaternions `{x, y, z, w}`.
 
 ---
@@ -15,12 +14,12 @@ This guide provides the exhaustive command-set, module reference, and usage patt
 ### 💻 Cross-Platform Terminal Usage
 - **Linux/macOS (curl)**:
   ```bash
-  API_URL="http://127.0.0.1:3005/api"
+  API_URL="http://127.0.0.1:3005/api/gameobjects`"
   curl -s -X GET "$API_URL/gameobjects"
   ```
 - **Windows (PowerShell)**:
   ```powershell
-  $API_URL = "http://127.0.0.1:3005/api"
+  $API_URL = "http://127.0.0.1:3005/api/gameobjects`"
   Invoke-RestMethod -Uri "$API_URL/gameobjects" -Method Get
   ```
 

@@ -2,14 +2,13 @@
 
 This guide provides the exhaustive command-set, module reference, and usage patterns for the Gear Engine using PowerShell (`Invoke-RestMethod`). It is intended for AI agents to understand how to build full games using the REST API and Scripting system.
 
-**Base URL**: `http://127.0.0.1:3005`  
-**API Root**: `/api`  
+
 **Coordinate System**: Right-handed, Y-up. Units in meters. Rotations are Quaternions `{x, y, z, w}`.
 
 ---
 
 ## 🛠️ API Fundamentals
-- **Base URL**: `$API_URL = "http://127.0.0.1:3005/api"`
+- **URL**: `$API_URL = "http://127.0.0.1:3005/api/gameobjects`"
 - **Method Conventions**: `Get`, `Post`, `Patch`, `Delete`
 - **Headers**: `-ContentType "application/json"`
 
