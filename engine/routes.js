@@ -606,12 +606,13 @@ router.get('/help', (req, res) => {
 
         const help = {
             projectName: "Gear Engine",
-            description: "A professional-grade 3D engine built specifically as a robust tool for AI agents. It enables agentic control of 3D scenes, physics simulations, and live previews via a high-performance REST API.",
+            description: "A professional-grade 3D engine built specifically as a robust tool for AI agents. It enables agentic control of 3D scenes, physics simulations, and live previews via a high-performance REST API. Scripts have access to ALL engine modules and can do MORE than the API alone.",
             api_root: "/api",
+            coordinate_system: "Right-handed, Y-up. Units in meters. Rotations are Quaternions {x,y,z,w}.",
             full_api_skill_reference: skillContent,
             quick_start: {
-                linux: "curl -X GET http://127.0.0.1:3005/api/gameobjects",
-                windows: "Invoke-RestMethod -Uri http://127.0.0.1:3005/api/gameobjects -Method Get"
+                linux: 'curl -X GET http://127.0.0.1:3005/api/gameobjects',
+                windows: 'Invoke-RestMethod -Uri http://127.0.0.1:3005/api/gameobjects -Method Get'
             },
             llm_guidance: {
                 "ai_agent_workflow": "This engine is designed for closed-loop AI control: 1. Deploy changes via API. 2. Observe state via /api/sync or /api/gameobjects. 3. Export/Persist layouts via /api/scenes/export.",
@@ -620,27 +621,133 @@ router.get('/help', (req, res) => {
                 "attachment_workflow": "A script MUST be saved via POST /api/scripts BEFORE attaching it to a GameObject. Failure to attach is usually due to missing files or syntax errors.",
                 "physics_first": "CRITICAL: This engine is physics-optimized. Avoid moving dynamic objects via .position; use .setLinearVelocity() or .applyImpulse() for realistic simulation.",
                 "module_priority": "CRITICAL: Always attempt to use built-in modules (GameObjectModule, PhysicsModule, etc.) before resorting to raw THREE or RAPIER access.",
-                "coordinate_system": "Right-handed, Y-up. Units in meters. Rotations are Quaternions {x,y,z,w}."
+                "source_inspection": "When unsure about a module's API surface, use GET /api/source?module=ModuleName to read engine source code directly.",
+                "two_approaches": "Games can be built via: (1) LIVE API — step-by-step curl/PowerShell commands, or (2) SCRIPTS — reusable .js files attached to GameObjects that have access to ALL modules and can build entire games from a single bootstrap script."
             },
-            scripting_examples: {
-                "Physics Movement": "function update(dt) { const move = {x:0, y:0, z: -10}; gameObject.setLinearVelocity(move); }",
-                "Physics Rotation": "function update(dt) { gameObject.setAngularVelocity({x:0, y:5, z:0}); }",
-                "Impulse Jump": "function update(dt) { if(InputModule.isKeyDown('Space')) gameObject.applyImpulse({x:0, y:12, z:0}); }",
-                "Collision Tags": "function onCollisionEnter(other) { if(other.tag==='Lava') gameObject.position = {x:0, y:5, z:0}; }",
-                "Prefab Spawning": "function update(dt) { if(InputModule.isKeyDown('KeyF')) GameObjectModule.instantiatePrefab('bullet.json', gameObject.position); }",
-                "Raw Math Help": "function update(dt) { const myPos = new THREE.Vector3(gameObject.position.x, 0, gameObject.position.z); const dist = myPos.distanceTo(new THREE.Vector3(0,0,0)); }"
+            available_modules: [
+                "GameObjectModule", "PhysicsModule", "ScriptModule", "LightModule",
+                "UIModule", "AudioModule", "CameraModule", "SkyboxModule",
+                "InputModule", "MaterialModule", "MeshModule", "CollidersModule",
+                "SceneModule", "VehicleModule"
+            ],
+            scripting: {
+                lifecycle_events: {
+                    "onStart()": "Fires once when the script is first attached. Use for initialization.",
+                    "update(dt)": "Fires every frame (~60fps). dt = seconds since last frame. Main game logic loop.",
+                    "fixedUpdate(dt)": "Fires every physics tick (60Hz). dt is always 1/60. Use for physics-critical logic.",
+                    "onCollisionEnter(other)": "Fires when this object starts touching another. other = the other GameObject.",
+                    "onCollisionExit(other)": "Fires when this object stops touching another.",
+                    "onTriggerEnter(other)": "Fires when entering a trigger volume.",
+                    "onTriggerExit(other)": "Fires when leaving a trigger volume."
+                },
+                available_in_scripts: [
+                    "gameObject — The attached object. Has .position, .rotation, .scale, .name, .tag, .id, .enabled",
+                    "gameObject.setLinearVelocity({x,y,z}) — Set velocity",
+                    "gameObject.setAngularVelocity({x,y,z}) — Set spin",
+                    "gameObject.applyImpulse({x,y,z}) — Instant force (jumps, explosions)",
+                    "gameObject.applyTorqueImpulse({x,y,z}) — Instant rotational force",
+                    "gameObject.move(direction, amount) — Translate",
+                    "gameObject.rotate(axis, angleDegrees) — Rotate by degrees",
+                    "gameObject.lookAt({x,y,z}) — Face a world position",
+                    "gameObject.setEnabled(bool) — Enable/disable",
+                    "GameObjectModule — Create, find, delete all objects",
+                    "PhysicsModule — Access RAPIER world, raycasting",
+                    "InputModule — Keyboard/mouse state (isKeyDown, isMouseButtonDown)",
+                    "AudioModule — Play/stop sounds",
+                    "UIModule — Create labels, buttons, inputs, checkboxes",
+                    "LightModule — Create/update/delete lights",
+                    "MaterialModule — Create/update materials",
+                    "CameraModule — Create cameras, set active, follow targets",
+                    "SkyboxModule — Change skybox color/panorama/cubemap",
+                    "SceneModule — Export/load scenes",
+                    "MeshModule — Mesh metadata and animation queries",
+                    "CollidersModule — Debug gizmos, collider inspection",
+                    "THREE — Full THREE.js library (Vector3, Quaternion, Euler, etc.)",
+                    "RAPIER — Full Rapier physics (Ray, queries, etc.)",
+                    "console — console.log(), console.error()"
+                ],
+                examples: {
+                    "WASD_Movement": "const speed = 8;\nfunction update(dt) {\n  const body = PhysicsModule.world.getRigidBody(gameObject.physics.bodyHandle);\n  const curVel = body ? body.linvel() : {x:0,y:0,z:0};\n  let vx=0, vz=0;\n  if (InputModule.isKeyDown('KeyW')) vz=-speed;\n  if (InputModule.isKeyDown('KeyS')) vz=speed;\n  if (InputModule.isKeyDown('KeyA')) vx=-speed;\n  if (InputModule.isKeyDown('KeyD')) vx=speed;\n  gameObject.setLinearVelocity({x:vx, y:curVel.y, z:vz});\n  if (InputModule.isKeyDown('Space') && Math.abs(curVel.y)<0.1)\n    gameObject.applyImpulse({x:0,y:12,z:0});\n}",
+                    "Spinning_Object": "function update(dt) { gameObject.setAngularVelocity({x:0, y:3, z:0}); }",
+                    "Face_Movement_Direction": "function update(dt) {\n  const body = PhysicsModule.world.getRigidBody(gameObject.physics.bodyHandle);\n  if (!body) return;\n  const vel = body.linvel();\n  if (Math.abs(vel.x)>0.1 || Math.abs(vel.z)>0.1) {\n    gameObject.lookAt({x:gameObject.position.x+vel.x, y:gameObject.position.y, z:gameObject.position.z+vel.z});\n  }\n}",
+                    "Animation_Controller": "let currentAnim = 'Idle';\nfunction onStart() { GameObjectModule.playAnimation(gameObject.id, 'Idle'); }\nfunction update(dt) {\n  const body = PhysicsModule.world.getRigidBody(gameObject.physics.bodyHandle);\n  if (!body) return;\n  const vel = body.linvel();\n  const speed = Math.sqrt(vel.x*vel.x + vel.z*vel.z);\n  let anim = speed > 0.5 ? 'Run' : (speed > 0.1 ? 'Walk' : 'Idle');\n  if (anim !== currentAnim) { currentAnim = anim; GameObjectModule.playAnimation(gameObject.id, anim); }\n}",
+                    "HUD_UI": "let score = 0;\nfunction onStart() {\n  UIModule.createLabel('score', 'Score: 0', 20, 20);\n  UIModule.createButton('restart', 'Restart', 300, 300);\n  UIModule.on('restart', 'click', () => { score=0; UIModule.setLabel('score', 'Score: 0'); });\n}\nfunction onCollisionEnter(other) {\n  if (other.tag === 'Coin') { score += 10; other.setEnabled(false); UIModule.setLabel('score', 'Score: '+score); }\n}",
+                    "Follow_Camera": "let camId = null;\nfunction onStart() {\n  const cam = CameraModule.createCamera({name:'PlayerCam', type:'follow', targetId: gameObject.id, offset:{x:0,y:4,z:8}, fov:60});\n  camId = cam.id;\n  CameraModule.setActiveCamera(camId);\n}\nfunction update(dt) {\n  const cam = CameraModule.getCamera(camId);\n  if (cam) cam.position = {x:gameObject.position.x+cam.offset.x, y:gameObject.position.y+cam.offset.y, z:gameObject.position.z+cam.offset.z};\n}",
+                    "Dynamic_Lighting": "function onStart() {\n  LightModule.createLight({name:'Sun', type:'directional', color:'#ffe0a0', intensity:2, position:{x:10,y:20,z:10}});\n}\nlet t=0;\nfunction update(dt) {\n  t += dt*0.1;\n  const r = Math.floor(128+127*Math.sin(t));\n  const g = Math.floor(100+100*Math.sin(t-1));\n  const b = Math.floor(180+75*Math.sin(t+1));\n  SkyboxModule.setColor('#'+r.toString(16).padStart(2,'0')+g.toString(16).padStart(2,'0')+b.toString(16).padStart(2,'0'));\n}",
+                    "Projectile_Spawner": "let cd=0;\nfunction update(dt) {\n  cd -= dt;\n  if (InputModule.isKeyDown('KeyF') && cd<=0) {\n    const p = GameObjectModule.createGameObject({name:'Bullet', type:'dynamic', primitive:'sphere', position:{x:gameObject.position.x, y:gameObject.position.y+1, z:gameObject.position.z-2}, scale:{x:0.2,y:0.2,z:0.2}, tag:'Projectile'});\n    p.setLinearVelocity({x:0,y:2,z:-30});\n    AudioModule.playSound('shoot','laser.mp3',false,0.3);\n    cd = 0.3;\n    setTimeout(() => GameObjectModule.deleteGameObject(p.id), 3000);\n  }\n}",
+                    "Enemy_AI": "let player = null;\nfunction onStart() {\n  player = GameObjectModule.getAllGameObjects().find(g => g.tag === 'Player');\n}\nfunction update(dt) {\n  if (!player) return;\n  const dx = player.position.x - gameObject.position.x;\n  const dz = player.position.z - gameObject.position.z;\n  const dist = Math.sqrt(dx*dx + dz*dz);\n  if (dist > 1.5) { gameObject.setLinearVelocity({x:(dx/dist)*3, y:0, z:(dz/dist)*3}); gameObject.lookAt(player.position); }\n  else gameObject.setLinearVelocity({x:0,y:0,z:0});\n}",
+                    "Raycasting": "function update(dt) {\n  const ray = new RAPIER.Ray({x:gameObject.position.x, y:gameObject.position.y, z:gameObject.position.z}, {x:0,y:-1,z:0});\n  const hit = PhysicsModule.world.castRay(ray, 10, true);\n  if (hit) {\n    const g = GameObjectModule.getGameObjectByColliderHandle(hit.collider.handle);\n    if (g) console.log('Ground: ' + g.name + ' dist: ' + hit.time.toFixed(2));\n  }\n}",
+                    "Elevator_Platform": "let startY=0, t=0;\nfunction onStart() { startY = gameObject.position.y; }\nfunction update(dt) {\n  t += dt;\n  gameObject.position = {x:gameObject.position.x, y:startY+Math.sin(t)*5, z:gameObject.position.z};\n}",
+                    "Material_Changes": "let hue=0;\nfunction onStart() {\n  MaterialModule.createMaterial('rainbow', {color:'#ff0000', roughness:0.3});\n  gameObject.mesh.materialId = 'rainbow';\n}\nfunction update(dt) {\n  hue = (hue + dt*50) % 360;\n  // HSL to hex conversion...\n  MaterialModule.updateMaterial('rainbow', {color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0')});\n}",
+                    "Audio_Zones": "let playing = false;\nfunction onTriggerEnter(other) { if (other.tag==='Player' && !playing) { AudioModule.playSound('zone','ambient.mp3',true,0.3); playing=true; } }\nfunction onTriggerExit(other) { if (other.tag==='Player' && playing) { AudioModule.stopSound('zone'); playing=false; } }",
+                    "Scene_Management": "function update(dt) {\n  if (InputModule.isKeyDown('Digit1')) SceneModule.exportScene(SceneModule.activeSceneId, 'level1.json');\n  if (InputModule.isKeyDown('Digit2')) SceneModule.loadScene('level1.json');\n}"
+                }
             },
             endpoints: {
-                "GET /api/help": "This comprehensive agentic reference.",
-                "GET /api/gameobjects": "Retrieve ALL active GameObjects in the current scene.",
-                "GET /api/sync": "Real-time physics state of all objects (optimized for renderers).",
-                "GET /api/source?module=ModuleName": "View the engine source code for any module.",
-                "POST /api/scripts": "Save or overwrite a script file in assets.",
-                "PATCH /api/scripts": "Edit an existing script file in assets.",
+                // GameObjects
+                "GET /api/gameobjects": "List all GameObjects in the scene.",
+                "GET /api/gameobjects/:id": "Get a specific GameObject by ID.",
+                "POST /api/gameobjects": "Create a new GameObject. Body: {name, type(dynamic|static|kinematic), primitive(cube|sphere|cylinder|cone|capsule|torus), position:{x,y,z}, rotation:{x,y,z,w}, scale:{x,y,z}, mass, modelUrl, isCharacter, tag, enabled}",
+                "PATCH /api/gameobjects/:id": "Update a GameObject. Body: {position, rotation, physics:{linvel,angvel,position,rotation}, mesh:{visible,materialId}, enabled, tag, name}",
+                "DELETE /api/gameobjects/:id": "Delete a GameObject and its physics body.",
+                "POST /api/gameobjects/:id/move": "Move a GameObject. Body: {direction:{x,y,z}, amount:number}",
+                "POST /api/gameobjects/:id/rotate": "Rotate a GameObject. Body: {axis:{x,y,z}, angle:degrees}",
+                "POST /api/gameobjects/:id/animations/play": "Play an animation. Body: {name:string}",
+                "POST /api/gameobjects/:id/animations/report": "Report available animations. Body: {animations:[string]}",
+                "POST /api/gameobjects/:id/export": "Export as prefab. Body: {fileName:string}",
+                // Scripts
+                "POST /api/scripts": "Save/create a script file. Body: {fileName, content}",
+                "PATCH /api/scripts": "Edit an existing script. Body: {fileName, content}",
                 "DELETE /api/scripts/:fileName": "Delete a script file from assets.",
-                "DELETE /api/gameobjects/:id/scripts/:fileName": "Detach a script from a specific GameObject.",
-                "POST /api/scenes/export": "Persist the current workspace to assets.",
-                "GET /api/assets/scenes": "List all available scene files."
+                "POST /api/gameobjects/:id/scripts": "Attach a script to a GameObject. Body: {fileName}",
+                "DELETE /api/gameobjects/:id/scripts/:fileName": "Detach a script from a GameObject.",
+                // Prefabs
+                "POST /api/prefabs/instantiate": "Instantiate a prefab. Body: {fileName, position?, rotation?}",
+                // Lights
+                "GET /api/lights": "List all lights.",
+                "POST /api/lights": "Create a light. Body: {name, type(point|directional|spot), color:hex, intensity, position:{x,y,z}, range}",
+                "PATCH /api/lights/:id": "Update a light. Body: any light property.",
+                "DELETE /api/lights/:id": "Delete a light.",
+                // Materials
+                "POST /api/materials": "Create a material. Body: {id, props:{color,emissive,roughness,wireframe,opacity,transparent}}",
+                "PATCH /api/materials/:id": "Update a material. Body: props or {props:{...}}",
+                // Audio
+                "POST /api/audio/play": "Play a sound. Body: {id, assetPath, loop:bool, volume:0-1}",
+                "POST /api/audio/stop": "Stop a sound. Body: {id}",
+                "POST /api/audio/setVolume": "Set volume. Body: {id, volume:0-1}",
+                // Cameras
+                "GET /api/cameras": "List all cameras.",
+                "GET /api/cameras/active": "Get the active camera.",
+                "POST /api/cameras": "Create a camera. Body: {name, type(static|follow), position, rotation, targetId, offset:{x,y,z}, fov}",
+                "POST /api/cameras/active": "Set active camera. Body: {id}",
+                "PATCH /api/cameras/:id": "Update a camera.",
+                "DELETE /api/cameras/:id": "Delete a camera (cannot delete default_orbit).",
+                // Skybox
+                "GET /api/skybox": "Get current skybox config.",
+                "POST /api/skybox": "Set skybox. Body: {type(color|equirectangular|cubemap), color:hex, assetPath, cubemapPaths:[6], intensity}",
+                // UI
+                "POST /api/ui": "Create a UI element. Body: {type(label|button|text|checkbox|radio), id, props:{label,value,checked,placeholder,x,y}}",
+                "POST /api/ui/event": "Handle UI event. Body: {id, type, data}",
+                // Input
+                "POST /api/input": "Push input state from client. Body: {keys:[], mouse:{buttons,x,y}}",
+                // Colliders
+                "GET /api/colliders/gizmos": "Check if debug wireframes are enabled.",
+                "POST /api/colliders/gizmos": "Toggle physics debug wireframes. Body: {enabled:bool}",
+                // Vehicles
+                "POST /api/vehicles": "Create a vehicle. Body: {id, chassisId, config:{wheels:[{connectionPoint,isFront,radius}]}}",
+                "PATCH /api/vehicles/:id/control": "Control a vehicle. Body: {engineForce, steering, brake}",
+                // Scenes
+                "GET /api/scenes": "List all scenes.",
+                "GET /api/scenes/active": "Get the active scene.",
+                "POST /api/scenes": "Create a new scene. Body: {name}",
+                "PUT /api/scenes/:id": "Rename a scene. Body: {name}",
+                "POST /api/scenes/export": "Export scene to file. Body: {id?, fileName}",
+                "POST /api/scenes/load": "Load a scene from file. Body: {fileName}",
+                "GET /api/assets/scenes": "List all saved scene JSON files.",
+                // System
+                "GET /api/sync": "Full state sync (positions, rotations, materials, audio, UI, camera, skybox, debug).",
+                "GET /api/source?module=Name": "View engine source code for any module. Available: GameObjectModule, PhysicsModule, ScriptModule, LightModule, UIModule, AudioModule, CameraModule, SkyboxModule, InputModule, MaterialModule, MeshModule, CollidersModule, SceneModule, VehicleModule",
+                "GET /api/help": "This comprehensive agentic reference."
             }
         };
         res.json(help);
