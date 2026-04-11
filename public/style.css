@@ -1,0 +1,327 @@
+:root {
+    --bg-dark: #0f0f10;
+    --bg-panel: #18181b;
+    --bg-hover: #27272a;
+    --text-primary: #f4f4f5;
+    --text-secondary: #a1a1aa;
+    --accent: #6366f1;
+    --accent-glow: rgba(99, 102, 241, 0.3);
+    --border: #3f3f46;
+    --font-main: 'Inter', sans-serif;
+    --font-heading: 'Outfit', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    overflow: hidden;
+    height: 100vh;
+}
+
+#app {
+    display: flex;
+    height: 100vh;
+}
+
+/* Sidebar */
+#sidebar {
+    width: 300px;
+    background-color: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+}
+
+header {
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+}
+
+header h1 {
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    color: var(--accent);
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.toggle-container input {
+    cursor: pointer;
+}
+
+.actions button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+.actions button:hover {
+    box-shadow: 0 0 10px var(--accent-glow);
+    transform: scale(1.1);
+}
+
+.section-title {
+    padding: 10px 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+#hierarchy {
+    flex: 1;
+    overflow-y: auto;
+}
+
+#gameobject-list {
+    list-style: none;
+    padding: 10px 0;
+}
+
+.go-item {
+    padding: 8px 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.2s;
+}
+
+.go-item:hover {
+    background: var(--bg-hover);
+}
+
+.go-item.active {
+    background: var(--bg-hover);
+    border-left: 3px solid var(--accent);
+    color: var(--accent);
+}
+
+.go-item i {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+#inspector {
+    height: 250px;
+    border-top: 1px solid var(--border);
+}
+
+#inspector-content {
+    padding: 20px;
+    font-size: 0.85rem;
+}
+
+.empty-msg {
+    color: var(--text-secondary);
+    font-style: italic;
+    text-align: center;
+}
+
+/* Viewport */
+#viewport-container {
+    flex: 1;
+    position: relative;
+    background-color: #000;
+}
+
+#viewport {
+    width: 100%;
+    height: 100%;
+}
+
+#overlay {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    pointer-events: none;
+}
+
+.status {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    padding: 10px 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: flex;
+    gap: 20px;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+}
+
+#physics-status {
+    color: #4ade80;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+#app {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+    display: none; /* Hidden by default */
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 450px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
+.modal-content header {
+    padding: 15px 20px;
+    background: rgba(255,255,255,0.02);
+}
+
+.modal-content h2 {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+}
+
+#close-modal {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+#scene-list-container {
+    padding: 20px;
+}
+
+#scene-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.scene-item {
+    padding: 12px 15px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.scene-item:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent);
+    transform: translateX(5px);
+}
+
+.scene-item span {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.scene-item .date {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+
+#save-scene {
+    background: #10b981 !important; /* Green for save */
+}
+
+#open-scenes {
+    background: #3b82f6 !important; /* Blue for open */
+}
+
+/* Dynamic UI Elements from Scripts */
+#ui-overlay button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--font-main);
+    font-size: 0.9rem;
+    transition: transform 0.1s;
+}
+
+#ui-overlay button:active {
+    transform: scale(0.95);
+}
+
+#ui-overlay input[type="text"] {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 6px 12px;
+    border-radius: 4px;
+    outline: none;
+}
+
+#ui-overlay span {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+#ui-overlay div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}

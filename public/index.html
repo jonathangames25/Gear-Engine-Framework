@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gear Engine | Rapier3D + Three.js</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Sidebar: GameObject List -->
+        <aside id="sidebar">
+            <header>
+                <h1>Gear Engine</h1>
+                <div class="actions">
+                    <div class="toggle-container">
+                        <label for="gizmo-toggle">Gizmos</label>
+                        <input type="checkbox" id="gizmo-toggle" checked>
+                    </div>
+                    <button id="add-go" title="Add Primitive">+</button>
+                    <button id="save-scene" title="Save Scene">💾</button>
+                    <button id="open-scenes" title="Scene Manager">📂</button>
+                </div>
+            </header>
+            <div id="hierarchy">
+                <div class="section-title">Scene Hierarchy</div>
+                <ul id="gameobject-list">
+                    <!-- Dynamic List -->
+                </ul>
+            </div>
+            <div id="inspector">
+                <div class="section-title">Properties</div>
+                <div id="inspector-content">
+                    <p class="empty-msg">Select an object to see properties</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content: Scene View -->
+        <main id="viewport-container">
+            <div id="viewport"></div>
+            <div id="overlay">
+                <div class="status">
+                    <span id="physics-status">Physics: Running</span>
+                    <span id="scene-name">Scene: Main Workspace</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Three.js Import Map -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="js/renderer.js"></script>
+
+    <!-- Modal for Scene Selection -->
+    <div id="scene-modal" class="modal">
+        <div class="modal-content">
+            <header>
+                <h2>Scene Manager</h2>
+                <button id="close-modal">&times;</button>
+            </header>
+            <div id="scene-list-container">
+                <p>Scanning assets...</p>
+                <ul id="scene-list"></ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

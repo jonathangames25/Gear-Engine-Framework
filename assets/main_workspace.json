@@ -1,0 +1,416 @@
+{
+  "id": "f74dd36b-29d1-4dfd-bb3c-ec4983e3270f",
+  "name": "Main Workspace",
+  "gameObjects": [
+    {
+      "id": "8e2d1fd5-227f-413e-8fd2-5b060d90dee2",
+      "name": "Ground Plane",
+      "physics": {
+        "bodyHandle": 0,
+        "colliderHandle": 0,
+        "type": "static",
+        "mass": 1,
+        "position": {
+          "x": 0,
+          "y": -0.05000000074505806,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        },
+        "scale": {
+          "x": 20,
+          "y": 0.1,
+          "z": 20
+        },
+        "colliderShape": "cube",
+        "colliderParams": {
+          "halfWidth": 10,
+          "halfHeight": 0.05,
+          "halfDepth": 10
+        },
+        "isCharacter": false
+      },
+      "mesh": {
+        "primitive": "cube",
+        "modelUrl": null,
+        "scale": {
+          "x": 20,
+          "y": 0.1,
+          "z": 20
+        },
+        "visible": true,
+        "materialId": "default"
+      },
+      "animations": [],
+      "currentAnimation": null,
+      "children": [],
+      "parentId": null,
+      "scripts": [],
+      "is_prefab": false,
+      "tag": null
+    },
+    {
+      "id": "2287d650-f884-4bd6-b0aa-048858a7dc56",
+      "name": "Platformer Soldier",
+      "physics": {
+        "bodyHandle": 5e-324,
+        "colliderHandle": 5e-324,
+        "type": "dynamic",
+        "mass": 1,
+        "position": {
+          "x": -1.93753888801107e-12,
+          "y": -0.0016812682151794434,
+          "z": 2.666666269302368
+        },
+        "rotation": {
+          "x": 0,
+          "y": 1,
+          "z": 0,
+          "w": 6.123234262925839e-17
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "colliderShape": "capsule",
+        "colliderParams": {
+          "height": 1,
+          "radius": 0.4,
+          "offset": {
+            "x": 0,
+            "y": 0.9,
+            "z": 0
+          }
+        },
+        "isCharacter": true
+      },
+      "mesh": {
+        "primitive": "cube",
+        "modelUrl": "Soldier.glb",
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "visible": true,
+        "materialId": "default"
+      },
+      "animations": [
+        "Idle",
+        "Run",
+        "TPose",
+        "Walk"
+      ],
+      "currentAnimation": "Idle",
+      "children": [],
+      "parentId": null,
+      "scripts": [
+        "character_controller.js"
+      ],
+      "is_prefab": false,
+      "tag": "player"
+    },
+    {
+      "id": "8a6fb1f8-9429-469d-9477-a3ecf7661f22",
+      "name": "Sphere 1",
+      "physics": {
+        "bodyHandle": 1e-323,
+        "colliderHandle": 1e-323,
+        "type": "dynamic",
+        "mass": 1,
+        "position": {
+          "x": 0,
+          "y": 0.49831876158714294,
+          "z": 4
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "colliderShape": "sphere",
+        "colliderParams": {
+          "radius": 0.5
+        },
+        "isCharacter": false
+      },
+      "mesh": {
+        "primitive": "sphere",
+        "modelUrl": null,
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "visible": true,
+        "materialId": "sphere_mat_1"
+      },
+      "animations": [],
+      "currentAnimation": null,
+      "children": [],
+      "parentId": null,
+      "scripts": [
+        "sphere_script.js"
+      ],
+      "is_prefab": false,
+      "tag": null
+    },
+    {
+      "id": "62df4fb4-ecc7-45c6-a80b-c8926977cdab",
+      "name": "Sphere 2",
+      "physics": {
+        "bodyHandle": 1.5e-323,
+        "colliderHandle": 1.5e-323,
+        "type": "dynamic",
+        "mass": 1,
+        "position": {
+          "x": 4,
+          "y": 0.49831876158714294,
+          "z": 0.0031999999191612005
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "colliderShape": "sphere",
+        "colliderParams": {
+          "radius": 0.5
+        },
+        "isCharacter": false
+      },
+      "mesh": {
+        "primitive": "sphere",
+        "modelUrl": null,
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "visible": true,
+        "materialId": "sphere_mat_2"
+      },
+      "animations": [],
+      "currentAnimation": null,
+      "children": [],
+      "parentId": null,
+      "scripts": [
+        "sphere_script.js"
+      ],
+      "is_prefab": false,
+      "tag": null
+    },
+    {
+      "id": "9edfec45-571a-4347-9b21-18ad2c967828",
+      "name": "Sphere 3",
+      "physics": {
+        "bodyHandle": 2e-323,
+        "colliderHandle": 2e-323,
+        "type": "dynamic",
+        "mass": 1,
+        "position": {
+          "x": 0.006399999838322401,
+          "y": 0.49831876158714294,
+          "z": -4
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "colliderShape": "sphere",
+        "colliderParams": {
+          "radius": 0.5
+        },
+        "isCharacter": false
+      },
+      "mesh": {
+        "primitive": "sphere",
+        "modelUrl": null,
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "visible": true,
+        "materialId": "sphere_mat_3"
+      },
+      "animations": [],
+      "currentAnimation": null,
+      "children": [],
+      "parentId": null,
+      "scripts": [
+        "sphere_script.js"
+      ],
+      "is_prefab": false,
+      "tag": null
+    },
+    {
+      "id": "89b715f8-a142-4a7d-90ad-398ce4fe6649",
+      "name": "Sphere 4",
+      "physics": {
+        "bodyHandle": 2.5e-323,
+        "colliderHandle": 2.5e-323,
+        "type": "dynamic",
+        "mass": 1,
+        "position": {
+          "x": -4,
+          "y": 0.49831876158714294,
+          "z": -0.009600000455975533
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "colliderShape": "sphere",
+        "colliderParams": {
+          "radius": 0.5
+        },
+        "isCharacter": false
+      },
+      "mesh": {
+        "primitive": "sphere",
+        "modelUrl": null,
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "visible": true,
+        "materialId": "sphere_mat_4"
+      },
+      "animations": [],
+      "currentAnimation": null,
+      "children": [],
+      "parentId": null,
+      "scripts": [
+        "sphere_script.js"
+      ],
+      "is_prefab": false,
+      "tag": null
+    }
+  ],
+  "lights": [
+    {
+      "id": "d8b26bd6-9f30-445b-b3d0-90acd6ad4611",
+      "name": "Main Directional Light",
+      "type": "directional",
+      "color": "#ffffff",
+      "intensity": 2.5,
+      "position": {
+        "x": 10,
+        "y": 20,
+        "z": 10
+      },
+      "range": 10
+    }
+  ],
+  "skybox": {
+    "type": "equirectangular",
+    "color": "#1a1a2e",
+    "assetPath": "venice_sunset_1k.hdr",
+    "cubemapPaths": null,
+    "intensity": 1
+  },
+  "metadata": {
+    "createdAt": "2026-04-11T09:33:23.925Z",
+    "modifiedAt": "2026-04-11T09:33:30.617Z"
+  },
+  "materials": [
+    {
+      "id": "default",
+      "color": "#ffffff",
+      "wireframe": false,
+      "opacity": 1,
+      "transparent": false
+    },
+    {
+      "id": "floor_mat",
+      "color": "#ffffff",
+      "map": "ground.jpg"
+    },
+    {
+      "id": "sphere_mat_1",
+      "color": "#ff0000"
+    },
+    {
+      "id": "sphere_mat_2",
+      "color": "#00ff00"
+    },
+    {
+      "id": "sphere_mat_3",
+      "color": "#0000ff"
+    },
+    {
+      "id": "sphere_mat_4",
+      "color": "#ffff00"
+    }
+  ],
+  "cameraData": {
+    "activeCameraId": "a4241f55-9e6c-4c1f-a0ea-96fbbe530970",
+    "cameras": [
+      {
+        "id": "default_orbit",
+        "name": "Orbit Camera",
+        "type": "orbit",
+        "fov": 75
+      },
+      {
+        "id": "a4241f55-9e6c-4c1f-a0ea-96fbbe530970",
+        "name": "Soldier Follow Cam",
+        "type": "follow",
+        "position": {
+          "x": 5,
+          "y": 5,
+          "z": 5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        },
+        "targetId": "2287d650-f884-4bd6-b0aa-048858a7dc56",
+        "offset": {
+          "x": 0,
+          "y": 4,
+          "z": 8
+        },
+        "fov": 75,
+        "metadata": {
+          "createdAt": "2026-04-11T09:33:30.841Z"
+        }
+      }
+    ]
+  }
+}
