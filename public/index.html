@@ -14,13 +14,16 @@
             <header>
                 <h1>Gear Engine</h1>
                 <div class="actions">
+                    <button id="add-go" title="Add Primitive">+</button>
+                    <button id="toggle-console" title="Toggle Console">📟</button>
+                    <button id="save-scene" title="Save Scene">💾</button>
+                    <button id="open-scenes" title="Scene Manager">📂</button>
+                </div>
+                <div class="sub-actions">
                     <div class="toggle-container">
                         <label for="gizmo-toggle">Gizmos</label>
                         <input type="checkbox" id="gizmo-toggle" checked>
                     </div>
-                    <button id="add-go" title="Add Primitive">+</button>
-                    <button id="save-scene" title="Save Scene">💾</button>
-                    <button id="open-scenes" title="Scene Manager">📂</button>
                 </div>
             </header>
             <div id="hierarchy">
@@ -40,6 +43,19 @@
         <!-- Main Content: Scene View -->
         <main id="viewport-container">
             <div id="viewport"></div>
+            
+            <!-- Console Window -->
+            <div id="console-window" class="console-hidden">
+                <div class="console-header">
+                    <span>Console</span>
+                    <div class="console-actions">
+                        <button id="clear-console">Clear</button>
+                        <button id="close-console">&times;</button>
+                    </div>
+                </div>
+                <div id="console-logs"></div>
+            </div>
+
             <div id="overlay">
                 <div class="status">
                     <span id="physics-status">Physics: Running</span>

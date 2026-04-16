@@ -12,11 +12,19 @@ class SkyboxModule {
 
     setSkybox(config) {
         // Validation and normalization
-        if (config.type) this.config.type = config.type;
-        if (config.color) this.config.color = config.color;
-        if (config.assetPath) this.config.assetPath = config.assetPath;
-        if (config.cubemapPaths) this.config.cubemapPaths = config.cubemapPaths;
-        if (config.intensity !== undefined) this.config.intensity = config.intensity;
+        if (config.type) {
+            this.config.type = config.type;
+            // Clear irrelevant paths if switching to color
+            if (config.type === 'color') {
+                this.config.assetPath = null;
+                this.config.cubemapPaths = null;
+            }
+        }
+        
+        if (config.hasOwnProperty('color')) this.config.color = config.color;
+        if (config.hasOwnProperty('assetPath')) this.config.assetPath = config.assetPath;
+        if (config.hasOwnProperty('cubemapPaths')) this.config.cubemapPaths = config.cubemapPaths;
+        if (config.hasOwnProperty('intensity')) this.config.intensity = config.intensity;
 
         console.log(`[SkyboxModule] Updated configuration:`, this.config);
         return this.config;

@@ -48,6 +48,13 @@ class Renderer {
         this.gizmosEnabled = localStorage.getItem('gizmosEnabled') !== 'false'; // Default to true
         this.appGui = new AppGUI(this);
 
+        // Console UI
+        this.consoleWindow = document.getElementById('console-window');
+        this.consoleLogs = document.getElementById('console-logs');
+        this.toggleConsoleBtn = document.getElementById('toggle-console');
+        this.closeConsoleBtn = document.getElementById('close-console');
+        this.clearConsoleBtn = document.getElementById('clear-console');
+
         this.init();
     }
 
@@ -97,6 +104,23 @@ class Renderer {
             this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
             this.sendInput();
         });
+
+        // Shortcuts
+        window.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 's') {
+                // Don't save if typing in an input
+                if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+                    return;
+                }
+                e.preventDefault();
+                this.appGui.saveCurrentScene();
+            }
+        });
+
+        // Console Events
+        this.toggleConsoleBtn.addEventListener('click', () => this.toggleConsole());
+        this.closeConsoleBtn.addEventListener('click', () => this.toggleConsole(false));
+        this.clearConsoleBtn.addEventListener('click', () => this.clearConsole());
 
         this.syncGizmoState();
         this.animate();
@@ -342,6 +366,11 @@ class Renderer {
             const audioEvents = response.audio;
             const uiCommands = response.ui;
             const debugData = response.debug;
+            const logs = response.logs;
+
+            if (logs && logs.length > 0) {
+                this.displayLogs(logs);
+            }
 
             if (audioEvents) {
                 audioEvents.forEach(ev => this.handleAudioEvent(ev));
@@ -496,8 +525,18 @@ class Renderer {
         console.log('[Renderer] Updating skybox:', config);
 
         if (config.type === 'color') {
-            this.scene.background = new THREE.Color(config.color);
+            const color = new THREE.Color(config.color);
+            this.scene.background = color;
             this.scene.environment = null;
+            
+            // Apply intensity if supported by the Three.js version
+            if (this.scene.hasOwnProperty('backgroundIntensity')) {
+                this.scene.backgroundIntensity = config.intensity !== undefined ? config.intensity : 1.0;
+            }
+            
+            // Fallback: Set renderer clear color as well
+            this.renderer.setClearColor(color, 1.0);
+            console.log(`[Renderer] Applied skybox color: ${config.color} with intensity ${config.intensity}`);
         } else if (config.type === 'equirectangular' && config.assetPath) {
             let url = config.assetPath;
             if (!url.startsWith('http') && !url.startsWith('/')) {
@@ -739,6 +778,31 @@ class Renderer {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id, type, data })
         }).catch(() => {});
+    }
+
+    toggleConsole(force) {
+        if (force !== undefined) {
+            if (force) this.consoleWindow.classList.remove('console-hidden');
+            else this.consoleWindow.classList.add('console-hidden');
+        } else {
+            this.consoleWindow.classList.toggle('console-hidden');
+        }
+    }
+
+    clearConsole() {
+        this.consoleLogs.innerHTML = '';
+    }
+
+    displayLogs(logs) {
+        logs.forEach(log => {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${log.type}`;
+            entry.innerHTML = `<span class="log-time">[${log.timestamp}]</span> <span class="log-msg">${log.message}</span>`;
+            this.consoleLogs.appendChild(entry);
+        });
+        
+        // Auto scroll
+        this.consoleLogs.scrollTop = this.consoleLogs.scrollHeight;
     }
 }
 

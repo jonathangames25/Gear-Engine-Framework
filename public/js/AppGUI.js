@@ -48,8 +48,15 @@ class AppGUI {
             const activeSceneData = await activeSceneResp.json();
             
             if (activeSceneData.status === 'success') {
-                const defaultName = (activeSceneData.data.name || 'default_scene').toLowerCase().replace(/ /g, '_');
-                let fileName = await this.showPrompt('Save Scene', 'Enter filename to save as (e.g. level1.json):', defaultName + '.json');
+                const scene = activeSceneData.data;
+                const defaultName = (scene.name || 'default_scene').toLowerCase().replace(/ /g, '_');
+                
+                // If the scene was loaded from a file, use that filename silently
+                let fileName = scene.metadata && scene.metadata.loadedFrom;
+                
+                if (!fileName) {
+                    fileName = await this.showPrompt('Save Scene', 'Enter filename to save as (e.g. level1.json):', defaultName + '.json');
+                }
                 
                 if (!fileName) return; // Cancelled
                 if (!fileName.endsWith('.json')) fileName += '.json';
@@ -67,7 +74,7 @@ class AppGUI {
                 
                 const result = await saveResp.json();
                 if (result.status === 'success') {
-                    this.showNotification(`Scene saved as ${fileName}`, 'success');
+                    this.showNotification(`Scene saved as ${result.fileName || fileName}`, 'success');
                 } else {
                     throw new Error(result.message);
                 }

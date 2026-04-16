@@ -1037,3 +1037,45 @@ const pos = body.translation();
 | `GET` | `/api/assets/scenes` | List saved scene files. |
 | `GET` | `/api/sync` | Full state sync. |
 | `GET` | `/api/source?module=Name` | View module source. |
+
+---
+
+## 🏃‍♂️ 11. CHARACTER CONTROLLER MODULE
+
+Stable movement for characters on Windows.
+
+### API Reference (PowerShell)
+```powershell
+# Move character
+Invoke-RestMethod -Uri "$API_URL/gameobjects/ID/character/move" -Method Post -ContentType "application/json" `
+  -Body '{"movement":{"x":1,"y":0,"z":0}, "dt":0.016}'
+
+# Jump
+Invoke-RestMethod -Uri "$API_URL/gameobjects/ID/character/jump" -Method Post
+```
+
+### Script Example (Windows-friendly)
+```javascript
+function update(dt) {
+    let input = { x: 0, z: 0 };
+    if (InputModule.isKeyDown('KeyW')) input.z = -1;
+    if (InputModule.isKeyDown('KeyS')) input.z = 1;
+    if (InputModule.isKeyDown('KeyA')) input.x = -1;
+    if (InputModule.isKeyDown('KeyD')) input.x = 1;
+    CharacterControllerModule.updateCharacter(gameObject.id, input, dt);
+    if (InputModule.isKeyDown('Space')) CharacterControllerModule.jump(gameObject.id);
+}
+```
+
+---
+
+## 📟 12. CONSOLE MODULE
+
+View engine logs and script output.
+
+### Scripting
+```javascript
+ConsoleModule.log("System initialized", "log");
+ConsoleModule.warn("Low memory detected");
+ConsoleModule.error("Physics crash!");
+```

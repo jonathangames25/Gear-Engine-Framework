@@ -13,6 +13,8 @@ const ScriptModule = require('./modules/ScriptModule');
 const UIModule = require('./modules/UIModule');
 const CameraModule = require('./modules/CameraModule');
 const SkyboxModule = require('./modules/SkyboxModule');
+const CharacterControllerModule = require('./modules/CharacterControllerModule');
+const ConsoleModule = require('./modules/ConsoleModule');
 
 
 // --- Camera Routes ---
@@ -127,11 +129,17 @@ router.post('/scenes/export', (req, res) => {
     try {
         const { id, fileName } = req.body;
         const sceneId = id || SceneModule.activeSceneId;
-        const success = SceneModule.exportScene(sceneId, fileName || 'scene.json');
+        const scene = SceneModule.getScene(sceneId);
+        if (!scene) return res.status(404).json({ status: 'error', message: 'Scene not found' });
+
+        // Use fileName from body, OR from metadata.loadedFrom, OR default to scene.json
+        const actualFileName = fileName || (scene.metadata && scene.metadata.loadedFrom) || 'scene.json';
+        
+        const success = SceneModule.exportScene(sceneId, actualFileName);
         if (success) {
-            res.json({ status: 'success', message: `Scene exported to ${fileName || 'scene.json'}` });
+            res.json({ status: 'success', message: `Scene saved to ${actualFileName}`, fileName: actualFileName });
         } else {
-            res.status(404).json({ status: 'error', message: 'Scene not found' });
+            res.status(500).json({ status: 'error', message: 'Failed to export scene' });
         }
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
@@ -339,6 +347,26 @@ router.post('/gameobjects/:id/export', (req, res) => {
     }
 });
 
+// --- Character Controller Routes ---
+router.post('/gameobjects/:id/character/move', (req, res) => {
+    try {
+        const { movement, dt } = req.body;
+        CharacterControllerModule.moveCharacter(req.params.id, movement || {x:0, y:0, z:0}, dt || 1/60);
+        res.json({ status: 'success' });
+    } catch (e) {
+        res.status(400).json({ status: 'error', message: e.message });
+    }
+});
+
+router.post('/gameobjects/:id/character/jump', (req, res) => {
+    try {
+        CharacterControllerModule.jump(req.params.id);
+        res.json({ status: 'success' });
+    } catch (e) {
+        res.status(400).json({ status: 'error', message: e.message });
+    }
+});
+
 // --- Prefab Routes ---
 router.post('/prefabs/instantiate', (req, res) => {
     try {
@@ -542,6 +570,7 @@ router.get('/sync', (req, res) => {
         ui: UIModule.getSyncData(),
         camera: CameraModule.getSyncData(),
         skybox: SkyboxModule.getSkybox(),
+        logs: ConsoleModule.getNewLogs(),
         debug: CollidersModule.gizmosEnabled ? PhysicsModule.world.debugRender() : null
     });
 });
@@ -628,7 +657,7 @@ router.get('/help', (req, res) => {
                 "GameObjectModule", "PhysicsModule", "ScriptModule", "LightModule",
                 "UIModule", "AudioModule", "CameraModule", "SkyboxModule",
                 "InputModule", "MaterialModule", "MeshModule", "CollidersModule",
-                "SceneModule", "VehicleModule"
+                "SceneModule", "VehicleModule", "CharacterControllerModule", "ConsoleModule"
             ],
             scripting: {
                 lifecycle_events: {
@@ -664,7 +693,9 @@ router.get('/help', (req, res) => {
                     "CollidersModule — Debug gizmos, collider inspection",
                     "THREE — Full THREE.js library (Vector3, Quaternion, Euler, etc.)",
                     "RAPIER — Full Rapier physics (Ray, queries, etc.)",
-                    "console — console.log(), console.error()"
+                    "CharacterControllerModule — Move, jump, update characters with gravity",
+                    "ConsoleModule — Log, warn, error, clear console",
+                    "console — console.log(), console.error() (piped to ConsoleModule)"
                 ],
                 examples: {
                     "WASD_Movement": "const speed = 8;\nfunction update(dt) {\n  const body = PhysicsModule.world.getRigidBody(gameObject.physics.bodyHandle);\n  const curVel = body ? body.linvel() : {x:0,y:0,z:0};\n  let vx=0, vz=0;\n  if (InputModule.isKeyDown('KeyW')) vz=-speed;\n  if (InputModule.isKeyDown('KeyS')) vz=speed;\n  if (InputModule.isKeyDown('KeyA')) vx=-speed;\n  if (InputModule.isKeyDown('KeyD')) vx=speed;\n  gameObject.setLinearVelocity({x:vx, y:curVel.y, z:vz});\n  if (InputModule.isKeyDown('Space') && Math.abs(curVel.y)<0.1)\n    gameObject.applyImpulse({x:0,y:12,z:0});\n}",
@@ -680,7 +711,8 @@ router.get('/help', (req, res) => {
                     "Elevator_Platform": "let startY=0, t=0;\nfunction onStart() { startY = gameObject.position.y; }\nfunction update(dt) {\n  t += dt;\n  gameObject.position = {x:gameObject.position.x, y:startY+Math.sin(t)*5, z:gameObject.position.z};\n}",
                     "Material_Changes": "let hue=0;\nfunction onStart() {\n  MaterialModule.createMaterial('rainbow', {color:'#ff0000', roughness:0.3});\n  gameObject.mesh.materialId = 'rainbow';\n}\nfunction update(dt) {\n  hue = (hue + dt*50) % 360;\n  // HSL to hex conversion...\n  MaterialModule.updateMaterial('rainbow', {color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0')});\n}",
                     "Audio_Zones": "let playing = false;\nfunction onTriggerEnter(other) { if (other.tag==='Player' && !playing) { AudioModule.playSound('zone','ambient.mp3',true,0.3); playing=true; } }\nfunction onTriggerExit(other) { if (other.tag==='Player' && playing) { AudioModule.stopSound('zone'); playing=false; } }",
-                    "Scene_Management": "function update(dt) {\n  if (InputModule.isKeyDown('Digit1')) SceneModule.exportScene(SceneModule.activeSceneId, 'level1.json');\n  if (InputModule.isKeyDown('Digit2')) SceneModule.loadScene('level1.json');\n}"
+                    "Scene_Management": "function update(dt) {\n  if (InputModule.isKeyDown('Digit1')) SceneModule.exportScene(SceneModule.activeSceneId, 'level1.json');\n  if (InputModule.isKeyDown('Digit2')) SceneModule.loadScene('level1.json');\n}",
+                    "Character_Movement": "function update(dt) {\n  let x=0, z=0;\n  if (InputModule.isKeyDown('KeyW')) z=-1;\n  if (InputModule.isKeyDown('KeyS')) z=1;\n  if (InputModule.isKeyDown('KeyA')) x=-1;\n  if (InputModule.isKeyDown('KeyD')) x=1;\n  CharacterControllerModule.updateCharacter(gameObject.id, {x, z}, dt);\n  if (InputModule.isKeyDown('Space')) CharacterControllerModule.jump(gameObject.id);\n}"
                 }
             },
             endpoints: {
@@ -701,6 +733,9 @@ router.get('/help', (req, res) => {
                 "DELETE /api/scripts/:fileName": "Delete a script file from assets.",
                 "POST /api/gameobjects/:id/scripts": "Attach a script to a GameObject. Body: {fileName}",
                 "DELETE /api/gameobjects/:id/scripts/:fileName": "Detach a script from a GameObject.",
+                // Character Controller
+                "POST /api/gameobjects/:id/character/move": "Move character with physics. Body: {movement:{x,y,z}, dt}",
+                "POST /api/gameobjects/:id/character/jump": "Make character jump.",
                 // Prefabs
                 "POST /api/prefabs/instantiate": "Instantiate a prefab. Body: {fileName, position?, rotation?}",
                 // Lights

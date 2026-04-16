@@ -5,6 +5,14 @@ const routes = require('./engine/routes');
 const physicsModule = require('./engine/modules/PhysicsModule');
 const sceneModule = require('./engine/modules/SceneModule');
 const scriptModule = require('./engine/modules/ScriptModule');
+const consoleModule = require('./engine/modules/ConsoleModule');
+
+// Redirect console to ConsoleModule for client sync
+global._originalConsole = { ...console };
+console.log = (msg) => consoleModule.log(msg, 'log');
+console.warn = (msg) => consoleModule.log(msg, 'warn');
+console.error = (msg) => consoleModule.log(msg, 'error');
+
 
 const app = express();
 const PORT = 3005;

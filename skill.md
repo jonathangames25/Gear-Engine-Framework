@@ -487,6 +487,8 @@ function update(dt) {
         SceneModule.loadScene('level1.json');
         console.log('Scene loaded!');
     }
+    
+    // Ctrl+S also works automatically to save the current scene.
 }
 ```
 
@@ -586,6 +588,27 @@ function update(dt) {
     if (InputModule.isKeyDown('KeyT')) {
         visible = !visible;
         gameObject.setEnabled(visible);
+    }
+}
+```
+
+### 🏃‍♂️ Script Example: Professional Character Controller
+```javascript
+// player_controller.js — Professional movement with gravity and jumping
+function update(dt) {
+    let x = 0;
+    let z = 0;
+
+    if (InputModule.isKeyDown('KeyW')) z = -1;
+    if (InputModule.isKeyDown('KeyS')) z = 1;
+    if (InputModule.isKeyDown('KeyA')) x = -1;
+    if (InputModule.isKeyDown('KeyD')) x = 1;
+
+    // Standard character update (handles speed, gravity, and ground detection)
+    CharacterControllerModule.updateCharacter(gameObject.id, { x, z }, dt);
+
+    if (InputModule.isKeyDown('Space')) {
+        CharacterControllerModule.jump(gameObject.id);
     }
 }
 ```
@@ -1147,7 +1170,57 @@ function update(dt) {
 
 ---
 
-## 🏎️ 11. VEHICLE MODULE (`/vehicles`)
+## 🏃‍♂️ 11. CHARACTER CONTROLLER MODULE (`/character`)
+
+Provides stable, physics-based movement for characters. Handles gravity, grounded checks, and slopes automatically.
+
+### API Reference
+
+| Action | Method | Endpoint | Body | Description |
+|:---|:---|:---|:---|:---|
+| **Move** | `POST` | `/api/gameobjects/:id/character/move` | `{movement, dt}` | Move the character. |
+| **Jump** | `POST` | `/api/gameobjects/:id/character/jump` | — | Trigger a jump. |
+
+### Scripting Methods
+
+| Method | Description |
+|:---|:---|
+| `CharacterControllerModule.updateCharacter(id, input, dt)` | Standard WASD movement logic (input: `{x, z}`). |
+| `CharacterControllerModule.jump(id)` | Triggers a jump if the character is grounded. |
+| `CharacterControllerModule.moveCharacter(id, moveVec, dt)` | Low-level move (moveVec: `{x, y, z}`). |
+
+### Script: Character Movement
+```javascript
+function update(dt) {
+    const input = {
+        x: (InputModule.isKeyDown('KeyD') ? 1 : 0) - (InputModule.isKeyDown('KeyA') ? 1 : 0),
+        z: (InputModule.isKeyDown('KeyS') ? 1 : 0) - (InputModule.isKeyDown('KeyW') ? 1 : 0)
+    };
+    CharacterControllerModule.updateCharacter('PLAYER_ID', input, dt);
+    
+    if (InputModule.isKeyDown('Space')) {
+        CharacterControllerModule.jump('PLAYER_ID');
+    }
+}
+```
+
+---
+
+## 📟 12. CONSOLE MODULE
+
+Captures server logs and script output for the client UI.
+
+### Scripting Methods
+
+| Method | Description |
+|:---|:---|:---|
+| `ConsoleModule.log(message, type)` | Log a message to the engine console. |
+| `ConsoleModule.clear()` | Clear all logs. |
+| `console.log()` | Overridden to automatically pipe to the ConsoleModule. |
+
+---
+
+## 🏎️ 13. VEHICLE MODULE (`/vehicles`)
 
 ### API Reference
 

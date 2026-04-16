@@ -36,6 +36,8 @@ class ScriptModule {
         const LightModule = require('./LightModule');
         const MeshModule = require('./MeshModule');
         const CollidersModule = require('./CollidersModule');
+        const CharacterControllerModule = require('./CharacterControllerModule');
+        const ConsoleModule = require('./ConsoleModule');
 
         const context = vm.createContext({
             gameObject: gameObject,
@@ -51,6 +53,8 @@ class ScriptModule {
             LightModule,
             MeshModule,
             CollidersModule,
+            CharacterControllerModule,
+            ConsoleModule,
             THREE,
             RAPIER,
             console: console,
