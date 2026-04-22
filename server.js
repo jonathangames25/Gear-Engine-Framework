@@ -6,6 +6,8 @@ const physicsModule = require('./engine/modules/PhysicsModule');
 const sceneModule = require('./engine/modules/SceneModule');
 const scriptModule = require('./engine/modules/ScriptModule');
 const consoleModule = require('./engine/modules/ConsoleModule');
+const interfaceModule = require('./engine/modules/InterfaceModule');
+const vehicleModule = require('./engine/modules/VehicleModule');
 
 // Redirect console to ConsoleModule for client sync
 global._originalConsole = { ...console };
@@ -27,6 +29,7 @@ app.use('/api', routes);
 async function start() {
     await physicsModule.init();
     await scriptModule.init();
+    await interfaceModule.init();
 
     // Set up physics callbacks for scripting
     physicsModule.setCollisionCallbacks(
@@ -39,7 +42,9 @@ async function start() {
     // Main logic loops
     const fixedDt = 1 / 60;
     setInterval(() => {
+        vehicleModule.step();
         scriptModule.onFixedUpdate(fixedDt);
+        interfaceModule.onFixedUpdate(fixedDt);
     }, 1000 / 60);
 
     let lastTime = Date.now();
@@ -48,6 +53,7 @@ async function start() {
         const dt = (now - lastTime) / 1000;
         lastTime = now;
         scriptModule.onUpdate(dt);
+        interfaceModule.onUpdate(dt);
     }, 16); // ~60fps regular update
 
     // Create an initial scene

@@ -790,6 +790,65 @@ curl -X DELETE "$API_URL/scripts/player_move.js"
 
 ---
 
+## 🧩 3.5 INTERFACES (PREMADE BEHAVIORS)
+
+Interfaces are read-only, professionally written behavior scripts located in the `/interfaces` root folder. They cannot be edited by users or AI during gameplay but expose variables (`properties`) to easily hook up AI control or external scripts without writing raw logic. 
+
+**This is the preferred, most powerful way for AI to implement complex behaviors instantly!**
+
+### API Endpoints
+
+| Action | Method | Endpoint | Body | Description |
+|:---|:---|:---|:---|:---|
+| **Attach** | `POST` | `/api/gameobjects/:id/interfaces` | `{name: string, properties?: object}` | Attaches an interface (e.g., `VehicleControllerInterface`) |
+| **Detach** | `DELETE`| `/api/gameobjects/:id/interfaces/:name`| — | Removes an attached interface. |
+| **Update** | `PATCH`| `/api/gameobjects/:id/interfaces/:name/properties` | `{properties: object}` | Manipulate variables exposed by the interface on the fly. |
+
+### Available Interfaces
+
+#### 1. `CharacterControllerInterface`
+A ready-to-use character movement script for walking and jumping.
+**Exposed Properties**:
+- `speed` (number) - Movement speed limit.
+- `jumpForce` (number) - How high to jump.
+- `horizontal` (number) - AI writes `-1` to `1` to move left/right.
+- `vertical` (number) - AI writes `-1` to `1` to move backward/forward.
+- `doJump` (boolean) - AI writes `true` to fire a jump event.
+
+#### 2. `VehicleControllerInterface`
+A complete Ackermann-steering raycast vehicle with lateral friction and engine force. Automatically attaches to the GameObject's physics chassis.
+**Exposed Properties**:
+- `maxEngineForce`, `maxSteering` (number) - Config bounds.
+- `engineForce` (number) - AI writes `-1` to `1` for throttle/reverse.
+- `steering` (number) - AI writes `-1` to `1` for turning.
+- `brake` (number) - AI writes `0` to `1` to apply brake impulses.
+
+### Example (curl)
+```bash
+# Attach the vehicle interface to a chassis
+curl -X POST "$API_URL/gameobjects/CHASSIS_ID/interfaces" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "VehicleControllerInterface", "properties": {"maxEngineForce": 1500}}'
+
+# Drive the vehicle forward and steer left
+curl -X PATCH "$API_URL/gameobjects/CHASSIS_ID/interfaces/VehicleControllerInterface/properties" \
+  -H "Content-Type: application/json" \
+  -d '{"properties": {"engineForce": 1.0, "steering": -0.5}}'
+```
+
+### Usage Inside Scripts
+Other scripts can control them instantly via `gameObject.interfaces`.
+```javascript
+function update(dt) {
+    if (gameObject.interfaces && gameObject.interfaces["CharacterControllerInterface"]) {
+        // Move character autonomously
+        gameObject.interfaces["CharacterControllerInterface"].horizontal = 1;
+    }
+}
+```
+
+---
+
 ## 💡 4. LIGHT MODULE (`/lights`)
 
 ### API Reference

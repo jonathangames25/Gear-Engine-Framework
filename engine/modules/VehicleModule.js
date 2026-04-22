@@ -77,8 +77,20 @@ class Vehicle {
                     this.chassisBody.applyImpulseAtPoint(force, rayOrigin, true);
                     
                     // Simple engine force (forward)
+                    let steerFwd = { x: 0, y: 0, z: -1 };
+                    let steerRight = { x: 1, y: 0, z: 0 };
+                    
+                    if (wheel.steering !== 0) {
+                        const cos = Math.cos(wheel.steering);
+                        const sin = Math.sin(wheel.steering);
+                        steerFwd = { x: -sin, y: 0, z: -cos };
+                        steerRight = { x: cos, y: 0, z: -sin };
+                    }
+
+                    const forward = rotateVector(steerFwd);
+                    const right = rotateVector(steerRight);
+
                     if (wheel.engineForce !== 0) {
-                        const forward = rotateVector({ x: 0, y: 0, z: -1 });
                         const driveForce = {
                             x: forward.x * wheel.engineForce,
                             y: forward.y * wheel.engineForce,
@@ -87,8 +99,40 @@ class Vehicle {
                         this.chassisBody.applyImpulseAtPoint(driveForce, rayOrigin, true);
                     }
 
-                    // Simple steering (lateral force if rotating)
-                    // (Omitted for brevity in this simple model, but would apply lateral impulses)
+                    // Calculate point velocity
+                    const velocity = this.chassisBody.linvel();
+                    const angVel = this.chassisBody.angvel();
+                    const r = localPos;
+                    const pointVel = {
+                        x: velocity.x + (angVel.y * r.z - angVel.z * r.y),
+                        y: velocity.y + (angVel.z * r.x - angVel.x * r.z),
+                        z: velocity.z + (angVel.x * r.y - angVel.y * r.x)
+                    };
+
+                    // Lateral friction (steering / drifting)
+                    const latVel = (pointVel.x * right.x + pointVel.y * right.y + pointVel.z * right.z);
+                    const latForceMag = -latVel * this.chassisBody.mass() * 0.15; // Grip factor
+                    
+                    const latForce = {
+                        x: right.x * latForceMag,
+                        y: right.y * latForceMag,
+                        z: right.z * latForceMag
+                    };
+                    this.chassisBody.applyImpulseAtPoint(latForce, rayOrigin, true);
+
+                    // Braking force
+                    if (wheel.brake > 0) {
+                        const fwdVel = (pointVel.x * forward.x + pointVel.y * forward.y + pointVel.z * forward.z);
+                        if (Math.abs(fwdVel) > 0.1) {
+                            const brakeForceMag = -Math.sign(fwdVel) * wheel.brake;
+                            const brakeForce = {
+                                x: forward.x * brakeForceMag,
+                                y: forward.y * brakeForceMag,
+                                z: forward.z * brakeForceMag
+                            };
+                            this.chassisBody.applyImpulseAtPoint(brakeForce, rayOrigin, true);
+                        }
+                    }
                 }
             } else {
                 wheel.isInContact = false;

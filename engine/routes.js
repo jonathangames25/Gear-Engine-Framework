@@ -15,6 +15,7 @@ const CameraModule = require('./modules/CameraModule');
 const SkyboxModule = require('./modules/SkyboxModule');
 const CharacterControllerModule = require('./modules/CharacterControllerModule');
 const ConsoleModule = require('./modules/ConsoleModule');
+const InterfaceModule = require('./modules/InterfaceModule');
 
 
 // --- Camera Routes ---
@@ -373,6 +374,55 @@ router.post('/gameobjects/:id/export', (req, res) => {
     }
 });
 
+// --- Interface Routes ---
+router.post('/gameobjects/:id/interfaces', (req, res) => {
+    const go = GameObjectModule.getGameObject(req.params.id);
+    if (!go) return res.status(404).json({ status: 'error', message: 'GameObject not found' });
+
+    const interfaceName = req.body.name;
+    const initialProperties = req.body.properties || {};
+    const instance = InterfaceModule.attachInterface(go, interfaceName, initialProperties);
+    
+    if (instance) {
+        res.json({ status: 'success', message: 'Interface attached successfully', data: instance.name });
+    } else {
+        res.status(400).json({ status: 'error', message: 'Failed to attach interface' });
+    }
+});
+
+router.delete('/gameobjects/:id/interfaces/:name', (req, res) => {
+    const go = GameObjectModule.getGameObject(req.params.id);
+    if (!go) return res.status(404).json({ status: 'error', message: 'GameObject not found' });
+
+    const success = InterfaceModule.detachInterface(go, req.params.name);
+    if (success) {
+        res.json({ status: 'success', message: `Interface ${req.params.name} detached successfully` });
+    } else {
+        res.status(404).json({ status: 'error', message: `Interface ${req.params.name} not found on this GameObject` });
+    }
+});
+
+router.patch('/gameobjects/:id/interfaces/:name/properties', (req, res) => {
+    const go = GameObjectModule.getGameObject(req.params.id);
+    if (!go) return res.status(404).json({ status: 'error', message: 'GameObject not found' });
+
+    const properties = req.body.properties || {};
+    let anySuccess = false;
+    
+    for (const [key, value] of Object.entries(properties)) {
+        if (InterfaceModule.updateProperty(go.id, req.params.name, key, value)) {
+            anySuccess = true;
+        }
+    }
+    
+    if (anySuccess) {
+        res.json({ status: 'success', message: 'Properties updated successfully' });
+    } else {
+        res.status(400).json({ status: 'error', message: 'Failed to update properties (interface might not be attached, or bad format)' });
+    }
+});
+
+
 // --- Character Controller Routes ---
 router.post('/gameobjects/:id/character/move', (req, res) => {
     try {
@@ -586,7 +636,8 @@ router.get('/sync', (req, res) => {
             enabled: go.enabled,
             visible: go.enabled && go.mesh.visible,
             material: mat || { color: '#ffffff' },
-            currentAnimation: go.currentAnimation
+            currentAnimation: go.currentAnimation,
+            interfaces: go.interfaces || {}
         };
     }).filter(s => !s.missing);
     res.json({ 
