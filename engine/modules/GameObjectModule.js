@@ -30,43 +30,36 @@ class GameObjectModule {
         }
 
         // 2. Determine Collider based on primitive or if it's a model
-        let colliderShape = primitive;
+        let colliderShape = params.physics?.colliderShape || (modelUrl ? 'cube' : primitive);
         let colliderParams = {};
         
-        if (modelUrl && primitive === 'cube') {
-            // Default to capsule for models if not specified otherwise
-            colliderShape = 'capsule';
-            const height = 1.0 * scale.y;
-            const radius = 0.4 * scale.x;
-            colliderParams = { 
-                height, 
-                radius,
-                offset: { x: 0, y: (height / 2) + radius, z: 0 } // Offset to put bottom at model origin
-            };
-        } else {
-            switch(primitive) {
-                case 'sphere':
-                    colliderParams = { radius: 0.5 * scale.x };
-                    break;
-                case 'cylinder':
-                    colliderParams = { height: 1.0 * scale.y, radius: 0.5 * scale.x };
-                    break;
-                case 'cone':
-                    colliderParams = { height: 1.0 * scale.y, radius: 0.5 * scale.x };
-                    break;
-                case 'capsule':
-                    colliderParams = { height: 1.0 * scale.y, radius: 0.5 * scale.x, offset: { x: 0, y: 1.0, z: 0 } };
-                    break;
-                case 'torus':
-                    // Rapier doesn't have a torus primitive, use cylinder approximation
-                    colliderParams = { height: 0.4 * scale.y, radius: 0.7 * scale.x };
-                    colliderShape = 'cylinder';
-                    break;
-                case 'cube':
-                default:
-                    colliderParams = { halfWidth: 0.5 * scale.x, halfHeight: 0.5 * scale.y, halfDepth: 0.5 * scale.z };
-                    break;
-            }
+        switch(colliderShape) {
+            case 'capsule':
+                const cHeight = 1.0 * scale.y;
+                const cRadius = 0.5 * scale.x;
+                colliderParams = { 
+                    height: cHeight, 
+                    radius: cRadius,
+                    offset: { x: 0, y: (cHeight / 2) + cRadius, z: 0 } 
+                };
+                break;
+            case 'sphere':
+                colliderParams = { radius: 0.5 * scale.x };
+                break;
+            case 'cylinder':
+                colliderParams = { height: 1.0 * scale.y, radius: 0.5 * scale.x };
+                break;
+            case 'cone':
+                colliderParams = { height: 1.0 * scale.y, radius: 0.5 * scale.x };
+                break;
+            case 'torus':
+                colliderParams = { height: 0.4 * scale.y, radius: 0.7 * scale.x };
+                colliderShape = 'cylinder';
+                break;
+            case 'cube':
+            default:
+                colliderParams = { halfWidth: 0.5 * scale.x, halfHeight: 0.5 * scale.y, halfDepth: 0.5 * scale.z };
+                break;
         }
         
         const collider = physicsModule.createCollider(colliderShape, rigidBody, colliderParams);
@@ -104,7 +97,29 @@ class GameObjectModule {
             parentId: null,
             scripts: [],
             is_prefab: params.is_prefab || false,
-            tag: params.tag || null
+            tag: params.tag || null,
+            modelStructure: [] // To store sub-mesh names and hierarchy
+        };
+
+        // Helper to find sub-meshes from modelStructure
+        gameObject.getChild = (name) => {
+            const findNode = (nodes) => {
+                for (const node of nodes) {
+                    if (node.name === name) return node;
+                    if (node.children) {
+                        const child = findNode(node.children);
+                        if (child) return child;
+                    }
+                }
+                return null;
+            };
+            return findNode(gameObject.modelStructure);
+        };
+
+        // Method to update sub-mesh position/rotation (synced to client via GameObject sync)
+        gameObject.setChildTransform = (name, transform) => {
+            if (!gameObject.childTransforms) gameObject.childTransforms = {};
+            gameObject.childTransforms[name] = transform; // { position, rotation }
         };
 
         if (gameObject.physics.isCharacter) {
@@ -321,6 +336,14 @@ class GameObjectModule {
                                 break;
                         }
 
+                        // Support custom offset if provided in the update
+                        if (updates.physics.colliderOffset) {
+                            newParams.offset = updates.physics.colliderOffset;
+                        } else if (go.physics.colliderParams.offset) {
+                            // Preserve existing offset if not overridden
+                            newParams.offset = go.physics.colliderParams.offset;
+                        }
+
                         const CollidersModule = require('./CollidersModule');
                         const newHandle = CollidersModule.recreateCollider(
                             go.physics.colliderHandle,
@@ -352,6 +375,13 @@ class GameObjectModule {
             if (updates.animations !== undefined) go.animations = updates.animations;
             if (updates.name) go.name = updates.name;
             if (updates.tag !== undefined) go.tag = updates.tag;
+
+            if (updates.scriptProperties) {
+                const ScriptModule = require('./ScriptModule');
+                updates.scriptProperties.forEach(sUpdate => {
+                    ScriptModule.updateScriptProperties(id, sUpdate.fileName, sUpdate.properties);
+                });
+            }
 
             return go;
         }
@@ -514,6 +544,15 @@ class GameObjectModule {
         const go = this.gameObjects.get(id);
         if (go) {
             go.animations = animations;
+            return true;
+        }
+        return false;
+    }
+
+    reportModelStructure(id, structure) {
+        const go = this.gameObjects.get(id);
+        if (go) {
+            go.modelStructure = structure;
             return true;
         }
         return false;

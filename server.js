@@ -10,10 +10,20 @@ const interfaceModule = require('./engine/modules/InterfaceModule');
 const vehicleModule = require('./engine/modules/VehicleModule');
 
 // Redirect console to ConsoleModule for client sync
-global._originalConsole = { ...console };
-console.log = (msg) => consoleModule.log(msg, 'log');
-console.warn = (msg) => consoleModule.log(msg, 'warn');
-console.error = (msg) => consoleModule.log(msg, 'error');
+const originalLog = console.log;
+const originalWarn = console.warn;
+const originalError = console.error;
+global._originalConsole = { log: originalLog, warn: originalWarn, error: originalError };
+
+console.log = (...args) => {
+    consoleModule.log(args.join(' '), 'log');
+};
+console.warn = (...args) => {
+    consoleModule.log(args.join(' '), 'warn');
+};
+console.error = (...args) => {
+    consoleModule.log(args.join(' '), 'error');
+};
 
 
 const app = express();

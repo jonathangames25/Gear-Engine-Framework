@@ -203,7 +203,20 @@ router.post('/gameobjects', (req, res) => {
 router.get('/gameobjects/:id', (req, res) => {
     const go = GameObjectModule.getGameObject(req.params.id);
     if (go) {
-        res.json({ status: 'success', data: go });
+        // Enforce update from physics if needed
+        const body = PhysicsModule.world.getRigidBody(go.physics.bodyHandle);
+        if (body) {
+            const pos = body.translation();
+            const rot = body.rotation();
+            go.physics.position = { x: pos.x, y: pos.y, z: pos.z };
+            go.physics.rotation = { x: rot.x, y: rot.y, z: rot.z, w: rot.w };
+        }
+        
+        // Add script properties for UI
+        const data = { ...go };
+        data.scriptData = ScriptModule.getScriptProperties(req.params.id);
+        
+        res.json({ status: 'success', data });
     } else {
         res.status(404).json({ status: 'error', message: `GameObject with ID ${req.params.id} not found` });
     }
@@ -255,6 +268,15 @@ router.post('/gameobjects/:id/animations/report', (req, res) => {
     const success = GameObjectModule.reportAnimations(req.params.id, req.body.animations);
     if (success) {
         res.json({ status: 'success', message: 'Animations reported successfully' });
+    } else {
+        res.status(404).json({ status: 'error', message: `GameObject with ID ${req.params.id} not found` });
+    }
+});
+
+router.post('/gameobjects/:id/model-structure/report', (req, res) => {
+    const success = GameObjectModule.reportModelStructure(req.params.id, req.body.structure);
+    if (success) {
+        res.json({ status: 'success', message: 'Model structure reported successfully' });
     } else {
         res.status(404).json({ status: 'error', message: `GameObject with ID ${req.params.id} not found` });
     }
@@ -376,12 +398,12 @@ router.post('/gameobjects/:id/export', (req, res) => {
 
 // --- Interface Routes ---
 router.post('/gameobjects/:id/interfaces', (req, res) => {
-    const go = GameObjectModule.getGameObject(req.params.id);
-    if (!go) return res.status(404).json({ status: 'error', message: 'GameObject not found' });
+    let target = GameObjectModule.getGameObject(req.params.id) || CameraModule.getCamera(req.params.id);
+    if (!target) return res.status(404).json({ status: 'error', message: 'Target (GameObject or Camera) not found' });
 
     const interfaceName = req.body.name;
     const initialProperties = req.body.properties || {};
-    const instance = InterfaceModule.attachInterface(go, interfaceName, initialProperties);
+    const instance = InterfaceModule.attachInterface(target, interfaceName, initialProperties);
     
     if (instance) {
         res.json({ status: 'success', message: 'Interface attached successfully', data: instance.name });
@@ -391,26 +413,26 @@ router.post('/gameobjects/:id/interfaces', (req, res) => {
 });
 
 router.delete('/gameobjects/:id/interfaces/:name', (req, res) => {
-    const go = GameObjectModule.getGameObject(req.params.id);
-    if (!go) return res.status(404).json({ status: 'error', message: 'GameObject not found' });
+    let target = GameObjectModule.getGameObject(req.params.id) || CameraModule.getCamera(req.params.id);
+    if (!target) return res.status(404).json({ status: 'error', message: 'Target (GameObject or Camera) not found' });
 
-    const success = InterfaceModule.detachInterface(go, req.params.name);
+    const success = InterfaceModule.detachInterface(target, req.params.name);
     if (success) {
         res.json({ status: 'success', message: `Interface ${req.params.name} detached successfully` });
     } else {
-        res.status(404).json({ status: 'error', message: `Interface ${req.params.name} not found on this GameObject` });
+        res.status(404).json({ status: 'error', message: `Interface ${req.params.name} not found on this target` });
     }
 });
 
 router.patch('/gameobjects/:id/interfaces/:name/properties', (req, res) => {
-    const go = GameObjectModule.getGameObject(req.params.id);
-    if (!go) return res.status(404).json({ status: 'error', message: 'GameObject not found' });
+    let target = GameObjectModule.getGameObject(req.params.id) || CameraModule.getCamera(req.params.id);
+    if (!target) return res.status(404).json({ status: 'error', message: 'Target (GameObject or Camera) not found' });
 
     const properties = req.body.properties || {};
     let anySuccess = false;
     
     for (const [key, value] of Object.entries(properties)) {
-        if (InterfaceModule.updateProperty(go.id, req.params.name, key, value)) {
+        if (InterfaceModule.updateProperty(target.id, req.params.name, key, value)) {
             anySuccess = true;
         }
     }
@@ -648,7 +670,21 @@ router.get('/sync', (req, res) => {
         camera: CameraModule.getSyncData(),
         skybox: SkyboxModule.getSkybox(),
         logs: ConsoleModule.getNewLogs(),
-        debug: CollidersModule.gizmosEnabled ? PhysicsModule.world.debugRender() : null
+        debug: (() => {
+            if (!CollidersModule.gizmosEnabled) return null;
+            const physicsLines = PhysicsModule.world.debugRender();
+            const vehicleLines = VehicleModule.getDebugLines();
+            
+            const mergedVertices = new Float32Array(physicsLines.vertices.length + vehicleLines.vertices.length);
+            mergedVertices.set(physicsLines.vertices);
+            mergedVertices.set(vehicleLines.vertices, physicsLines.vertices.length);
+            
+            const mergedColors = new Float32Array(physicsLines.colors.length + vehicleLines.colors.length);
+            mergedColors.set(physicsLines.colors);
+            mergedColors.set(vehicleLines.colors, physicsLines.colors.length);
+            
+            return { vertices: mergedVertices, colors: mergedColors };
+        })()
     });
 });
 

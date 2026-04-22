@@ -99,6 +99,29 @@ class ScriptModule {
         }
     }
 
+    getScriptProperties(goId) {
+        if (!this.scriptInstances.has(goId)) return [];
+        
+        return this.scriptInstances.get(goId).map(inst => {
+            return {
+                fileName: inst.fileName,
+                properties: inst.context.properties || {}
+            };
+        });
+    }
+
+    updateScriptProperties(goId, fileName, newProps) {
+        if (!this.scriptInstances.has(goId)) return false;
+        
+        const instances = this.scriptInstances.get(goId);
+        const inst = instances.find(i => i.fileName === fileName);
+        if (inst && inst.context.properties) {
+            Object.assign(inst.context.properties, newProps);
+            return true;
+        }
+        return false;
+    }
+
     detachScript(gameObject, scriptFileName) {
         if (!this.scriptInstances.has(gameObject.id)) return false;
 

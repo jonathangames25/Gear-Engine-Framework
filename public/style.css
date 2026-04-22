@@ -123,13 +123,41 @@ header h1 {
 }
 
 .go-item {
-    padding: 8px 20px;
+    padding: 6px 15px;
     cursor: pointer;
     font-size: 0.9rem;
     display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    transition: background 0.1s;
+    border-bottom: 1px solid rgba(255,255,255,0.02);
+}
+
+.go-item.active > .go-header {
+    color: var(--accent);
+}
+
+.go-header {
+    display: flex;
     align-items: center;
-    gap: 10px;
-    transition: background 0.2s;
+    gap: 8px;
+    width: 100%;
+}
+
+.go-arrow {
+    width: 15px;
+    display: inline-block;
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    flex-shrink: 0;
+}
+
+.go-name {
+    flex: 1;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .go-item:hover {
@@ -137,14 +165,49 @@ header h1 {
 }
 
 .go-item.active {
-    background: var(--bg-hover);
+    background: rgba(99, 102, 241, 0.1);
     border-left: 3px solid var(--accent);
+}
+
+.go-item.active > .go-name {
     color: var(--accent);
 }
 
-.go-item i {
-    font-size: 0.8rem;
+/* Model Sub-Mesh Hierarchy */
+.model-hierarchy {
+    list-style: none;
+    padding-left: 12px;
+    margin-top: 4px;
+    border-left: 1px solid var(--border);
+    width: 100%;
+}
+
+.model-node-item {
+    padding: 2px 8px;
+    font-size: 0.75rem;
     color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.model-node-item .node-name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.model-node-item .node-name::before {
+    content: '├─';
+    color: var(--border);
+    font-family: monospace;
+}
+
+.model-node-item:last-child > .node-name::before {
+    content: '└─';
+}
+
+.model-node-item:hover {
+    opacity: 1;
+    color: var(--text-primary);
 }
 
 /* Spawn Panel */
@@ -262,6 +325,31 @@ header h1 {
     padding: 8px;
     border-radius: 4px;
     outline: none;
+}
+
+.section-divider {
+    padding: 15px 0 10px 0;
+    margin-top: 10px;
+    border-top: 1px solid var(--border);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.script-block {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.script-header {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    font-style: italic;
 }
 
 .transform-row {

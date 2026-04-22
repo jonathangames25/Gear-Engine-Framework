@@ -17,7 +17,7 @@ class InterfaceModule {
         // Initialization if needed
     }
 
-    attachInterface(gameObject, interfaceName, initialProperties = {}) {
+    attachInterface(object, interfaceName, initialProperties = {}) {
         const fileName = interfaceName.endsWith('.js') ? interfaceName : interfaceName + '.js';
         const filePath = path.join(this.interfacesPath, fileName);
         if (!fs.existsSync(filePath)) {
@@ -35,11 +35,12 @@ class InterfaceModule {
         const ScriptModule = require('./ScriptModule');
         const VehicleModule = require('./VehicleModule');
         const CharacterControllerModule = require('./CharacterControllerModule');
+        const CameraModule = require('./CameraModule');
 
         const properties = { ...initialProperties };
 
         const context = vm.createContext({
-            gameObject: gameObject,
+            gameObject: object, // This could be a camera or gameObject
             properties: properties,
             GameObjectModule,
             PhysicsModule,
@@ -49,6 +50,7 @@ class InterfaceModule {
             ScriptModule,
             VehicleModule,
             CharacterControllerModule,
+            CameraModule,
             THREE,
             RAPIER,
             console: console,
@@ -68,11 +70,11 @@ class InterfaceModule {
                 properties: context.properties
             };
 
-            if (!gameObject.interfaces) {
-                gameObject.interfaces = {};
+            if (!object.interfaces) {
+                object.interfaces = {};
             }
-            // Bind properties reference so it's globally accessible on the gameObject
-            gameObject.interfaces[instance.name] = instance.properties;
+            // Bind properties reference so it's globally accessible on the object
+            object.interfaces[instance.name] = instance.properties;
 
             if (context.onStart) {
                 try {
@@ -82,10 +84,10 @@ class InterfaceModule {
                 }
             }
 
-            if (!this.interfaceInstances.has(gameObject.id)) {
-                this.interfaceInstances.set(gameObject.id, []);
+            if (!this.interfaceInstances.has(object.id)) {
+                this.interfaceInstances.set(object.id, []);
             }
-            this.interfaceInstances.get(gameObject.id).push(instance);
+            this.interfaceInstances.get(object.id).push(instance);
             return instance;
         } catch (error) {
             console.error(`Error running interface ${interfaceName}:`, error);

@@ -20,6 +20,7 @@ class Renderer {
         this.loadingMap = new Set(); // gameObjectId -> Promise
         this.failedMap = new Set(); // gameObjectId -> boolean
         this.selectedId = null;
+        this.expandedIds = new Set();
         this.loader = new GLTFLoader();
         this.isRefreshing = false;
         this.isSyncing = false;
@@ -497,6 +498,20 @@ class Renderer {
                         model.userData.mixer = mixer;
                         model.userData.currentAnimation = null;
                     }
+                    // Extract and report model structure (children names)
+                    const getStructure = (node) => {
+                        const struct = { name: node.name, type: node.type };
+                        if (node.children && node.children.length > 0) {
+                            struct.children = node.children.map(c => getStructure(c));
+                        }
+                        return struct;
+                    };
+                    const structure = gltf.scene.children.map(c => getStructure(c));
+                    fetch(`${API_URL}/gameobjects/${go.id}/model-structure/report`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ structure })
+                    });
 
                     this.scene.add(model);
                     this.meshMap.set(go.id, model);
@@ -566,8 +581,50 @@ class Renderer {
                 for (const go of sceneData.gameObjects) {
                     const li = document.createElement('li');
                     li.className = `go-item ${this.selectedId === go.id ? 'active' : ''}`;
-                    li.innerHTML = `<span>${go.name}</span>`;
-                    li.onclick = () => this.selectGameObject(go.id);
+                    
+                    const hasChildren = go.modelStructure && go.modelStructure.length > 0;
+                    const isExpanded = this.expandedIds.has(go.id);
+                    const arrowText = hasChildren ? (isExpanded ? '▼' : '▶') : '';
+
+                    li.innerHTML = `
+                        <div class="go-header">
+                            <span class="go-arrow">${arrowText}</span>
+                            <span class="go-name">${go.name}</span>
+                        </div>
+                    `;
+
+                    li.onclick = (e) => {
+                        e.stopPropagation();
+                        if (hasChildren) {
+                            if (isExpanded) this.expandedIds.delete(go.id);
+                            else this.expandedIds.add(go.id);
+                        }
+                        this.selectGameObject(go.id);
+                    };
+                    
+                    // Render Model Structure (Internal nodes like wheels)
+                    if (this.expandedIds.has(go.id) && go.modelStructure && go.modelStructure.length > 0) {
+                        const subTree = document.createElement('ul');
+                        subTree.className = 'model-hierarchy';
+                        
+                        const renderNodes = (nodes, parentEl) => {
+                            nodes.forEach(node => {
+                                const subLi = document.createElement('li');
+                                subLi.className = 'model-node-item';
+                                subLi.innerHTML = `<span class="node-name">${node.name}</span>`;
+                                parentEl.appendChild(subLi);
+                                if (node.children && node.children.length > 0) {
+                                    const subUl = document.createElement('ul');
+                                    subLi.appendChild(subUl);
+                                    renderNodes(node.children, subUl);
+                                }
+                            });
+                        };
+                        
+                        renderNodes(go.modelStructure, subTree);
+                        li.appendChild(subTree);
+                    }
+
                     list.appendChild(li);
 
                     // Ensure mesh exists and isn't already loading or failed
@@ -711,6 +768,50 @@ class Renderer {
                     <option value="kinematic" ${go.physics.type === 'kinematic' ? 'selected' : ''}>Kinematic</option>
                 </select>
             </div>
+
+            ${go.scriptData && go.scriptData.length > 0 ? `
+                <div class="section-divider">Scripts</div>
+                ${(() => {
+                    const getAllNodes = (nodes) => {
+                        let list = [];
+                        nodes.forEach(n => {
+                            list.push(n.name);
+                            if (n.children) list = list.concat(getAllNodes(n.children));
+                        });
+                        return list;
+                    };
+                    const allModelNodes = go.modelStructure ? getAllNodes(go.modelStructure) : [];
+
+                    return go.scriptData.map(s => `
+                        <div class="script-block" data-file="${s.fileName}">
+                            <div class="script-header">${s.fileName}</div>
+                            ${Object.entries(s.properties).map(([key, val]) => {
+                                const isMeshRef = key.toLowerCase().includes('name') && allModelNodes.length > 0;
+                                return `
+                                    <div class="prop-group">
+                                        <label>${key.replace(/_/g, ' ')}</label>
+                                        ${isMeshRef ? `
+                                            <select data-script="${s.fileName}" data-key="${key}" class="script-prop-input">
+                                                <option value="">None</option>
+                                                ${allModelNodes.map(nodeName => `
+                                                    <option value="${nodeName}" ${val === nodeName ? 'selected' : ''}>${nodeName}</option>
+                                                `).join('')}
+                                            </select>
+                                        ` : `
+                                            <input type="${typeof val === 'number' ? 'number' : 'text'}" 
+                                                   step="${typeof val === 'number' ? '0.1' : ''}"
+                                                   value="${val}" 
+                                                   data-script="${s.fileName}" 
+                                                   data-key="${key}" 
+                                                   class="script-prop-input">
+                                        `}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `).join('');
+                })()}
+            ` : ''}
         `;
 
         // Event listeners for inspector inputs
@@ -739,12 +840,26 @@ class Renderer {
                 THREE.MathUtils.degToRad(rotationDeg.z)
             ));
 
+            // Extract script property updates
+            const scriptProperties = [];
+            content.querySelectorAll('.script-block').forEach(block => {
+                const fileName = block.dataset.file;
+                const properties = {};
+                block.querySelectorAll('.script-prop-input').forEach(input => {
+                    const key = input.dataset.key;
+                    const val = input.type === 'number' ? parseFloat(input.value) : input.value;
+                    properties[key] = val;
+                });
+                scriptProperties.push({ fileName, properties });
+            });
+
             this.updateTransform(id, {
                 name,
                 physics: { type },
                 position,
                 rotation: { x: q.x, y: q.y, z: q.z, w: q.w },
-                scale
+                scale,
+                scriptProperties
             });
 
             // Update mesh locally for immediate feedback
@@ -861,7 +976,25 @@ class Renderer {
                             if (state.material.transparent !== undefined) mesh.material.transparent = state.material.transparent;
                             if (state.material.wireframe !== undefined) mesh.material.wireframe = state.material.wireframe;
                         }
-
+ 
+                        // Synchronize Child Transforms (Sub-meshes of models like wheels)
+                        if (state.childTransforms) {
+                            for (const [nodeName, transform] of Object.entries(state.childTransforms)) {
+                                const subMesh = mesh.getObjectByName(nodeName);
+                                if (subMesh) {
+                                    if (transform.position) {
+                                        subMesh.position.set(transform.position.x, transform.position.y, transform.position.z);
+                                    }
+                                    if (transform.rotation) {
+                                        subMesh.quaternion.set(transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w);
+                                    }
+                                    if (transform.scale) {
+                                        subMesh.scale.set(transform.scale.x, transform.scale.y, transform.scale.z);
+                                    }
+                                }
+                            }
+                        }
+ 
                         // Improved Animation Sync
                         if (mesh.userData.mixer && state.currentAnimation !== mesh.userData.currentAnimation) {
                             console.log(`[Renderer] Animation state change for ${state.id}: ${mesh.userData.currentAnimation} -> ${state.currentAnimation}`);
