@@ -85,10 +85,36 @@ router.get('/assets/scenes', (req, res) => {
                     modifiedAt: stats.mtime
                 };
             })
-            // Filter out obvious non-scenes if needed, but for now all JSONs in assets might be scenes or prefabs
             .filter(s => s.name !== 'package.json'); 
 
         res.json({ status: 'success', data: scenes });
+    } catch (e) {
+        res.status(500).json({ status: 'error', message: e.message });
+    }
+});
+
+router.get('/assets/models', (req, res) => {
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const assetsPath = path.join(process.cwd(), 'assets');
+        
+        if (!fs.existsSync(assetsPath)) {
+            return res.json({ status: 'success', data: [] });
+        }
+
+        const files = fs.readdirSync(assetsPath);
+        const models = files
+            .filter(f => f.endsWith('.glb') || f.endsWith('.gltf'))
+            .map(f => {
+                const stats = fs.statSync(path.join(assetsPath, f));
+                return {
+                    name: f,
+                    modifiedAt: stats.mtime
+                };
+            });
+
+        res.json({ status: 'success', data: models });
     } catch (e) {
         res.status(500).json({ status: 'error', message: e.message });
     }

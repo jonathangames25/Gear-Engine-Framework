@@ -247,7 +247,7 @@ class GameObjectModule {
         if (go) {
             const body = physicsModule.world.getRigidBody(go.physics.bodyHandle);
             
-            // Handle top-level position/rotation updates for convenience
+            // Handle top-level position/rotation/scale updates for convenience
             if (updates.position) {
                 if (!updates.physics) updates.physics = {};
                 updates.physics.position = updates.position;
@@ -256,10 +256,26 @@ class GameObjectModule {
                 if (!updates.physics) updates.physics = {};
                 updates.physics.rotation = updates.rotation;
             }
+            if (updates.scale) {
+                if (!updates.physics) updates.physics = {};
+                updates.physics.scale = updates.scale;
+                if (!updates.mesh) updates.mesh = {};
+                updates.mesh.scale = updates.scale;
+            }
 
             // If physics properties are updated, sync with Rapier
             if (updates.physics) {
                 if (body) {
+                    if (updates.physics.type) {
+                        const RAPIER = require('@dimforge/rapier3d-compat');
+                        let type;
+                        switch (updates.physics.type) {
+                            case 'dynamic': type = RAPIER.RigidBodyType.Dynamic; break;
+                            case 'kinematic': type = RAPIER.RigidBodyType.KinematicPositionBased; break;
+                            case 'static': type = RAPIER.RigidBodyType.Fixed; break;
+                        }
+                        if (type !== undefined) body.setBodyType(type);
+                    }
                     if (updates.physics.position) {
                         body.setTranslation(updates.physics.position, true);
                     }
@@ -274,17 +290,47 @@ class GameObjectModule {
                     }
                 }
                 
-                // Special case: Scaling collider
-                if (updates.physics.colliderScale) {
-                    const CollidersModule = require('./CollidersModule');
-                    const newHandle = CollidersModule.updateColliderScale(
-                        go.physics.colliderHandle,
-                        updates.physics.colliderScale,
-                        go.physics.colliderShape,
-                        go.physics.colliderParams
-                    );
-                    if (newHandle !== null) {
-                        go.physics.colliderHandle = newHandle;
+                // Trigger collider update if scale or shape change
+                if (updates.physics.scale) {
+                    const scale = updates.physics.scale;
+                    const oldScale = go.physics.scale || { x: 1, y: 1, z: 1 };
+                    
+                    const scaleChanged = Math.abs(scale.x - oldScale.x) > 0.001 || 
+                                       Math.abs(scale.y - oldScale.y) > 0.001 || 
+                                       Math.abs(scale.z - oldScale.z) > 0.001;
+
+                    if (scaleChanged) {
+                        const shape = updates.physics.colliderShape || go.physics.colliderShape;
+                        
+                        // Recalculate collider params based on NEW scale
+                        let newParams = {};
+                        switch(shape) {
+                            case 'sphere':
+                                newParams = { radius: 0.5 * scale.x };
+                                break;
+                            case 'cylinder':
+                            case 'cone':
+                                newParams = { height: 1.0 * scale.y, radius: 0.5 * scale.x };
+                                break;
+                            case 'capsule':
+                                newParams = { height: 1.0 * scale.y, radius: 0.5 * scale.x, offset: { x: 0, y: (1.0 * scale.y)/2, z: 0 } };
+                                break;
+                            case 'cube':
+                            default:
+                                newParams = { halfWidth: 0.5 * scale.x, halfHeight: 0.5 * scale.y, halfDepth: 0.5 * scale.z };
+                                break;
+                        }
+
+                        const CollidersModule = require('./CollidersModule');
+                        const newHandle = CollidersModule.recreateCollider(
+                            go.physics.colliderHandle,
+                            shape,
+                            newParams
+                        );
+                        if (newHandle !== null) {
+                            go.physics.colliderHandle = newHandle;
+                            go.physics.colliderParams = newParams;
+                        }
                     }
                 }
 

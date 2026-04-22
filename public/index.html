@@ -32,6 +32,31 @@
                     <!-- Dynamic List -->
                 </ul>
             </div>
+            <div id="spawn-panel">
+                <div class="section-title">Spawn</div>
+                <div class="spawn-tabs">
+                    <button class="tab-btn active" data-tab="primitives">Primitives</button>
+                    <button class="tab-btn" data-tab="models">Models</button>
+                    <button class="tab-btn" data-tab="colliders">Colliders</button>
+                </div>
+                <div class="tab-content" id="primitives-list">
+                    <div class="spawn-item" data-type="cube">Cube</div>
+                    <div class="spawn-item" data-type="sphere">Sphere</div>
+                    <div class="spawn-item" data-type="cylinder">Cylinder</div>
+                    <div class="spawn-item" data-type="capsule">Capsule</div>
+                    <div class="spawn-item" data-type="cone">Cone</div>
+                    <div class="spawn-item" data-type="torus">Torus</div>
+                </div>
+                <div class="tab-content hidden" id="models-list">
+                    <p class="empty-msg">Scanning assets...</p>
+                </div>
+                <div class="tab-content hidden" id="colliders-list">
+                    <div class="spawn-item" data-collider="cube">Box Collider</div>
+                    <div class="spawn-item" data-collider="sphere">Sphere Collider</div>
+                    <div class="spawn-item" data-collider="cylinder">Cylinder Collider</div>
+                    <div class="spawn-item" data-collider="capsule">Capsule Collider</div>
+                </div>
+            </div>
             <div id="inspector">
                 <div class="section-title">Properties</div>
                 <div id="inspector-content">
@@ -60,6 +85,11 @@
                 <div class="status">
                     <span id="physics-status">Physics: Running</span>
                     <span id="scene-name">Scene: Main Workspace</span>
+                </div>
+                <div id="transform-tools">
+                    <button id="tool-translate" class="active" title="Translate (W)">✛</button>
+                    <button id="tool-rotate" title="Rotate (E)">↻</button>
+                    <button id="tool-scale" title="Scale (R)">✥</button>
                 </div>
             </div>
         </main>

@@ -24,7 +24,7 @@ class CollidersModule {
         };
     }
 
-    updateColliderScale(handle, scale, shape, currentProps) {
+    recreateCollider(handle, shape, props) {
         if (!physicsModule.world) return null;
         const collider = physicsModule.world.getCollider(handle);
         if (!collider) return null;
@@ -32,20 +32,7 @@ class CollidersModule {
         const body = collider.parent();
         physicsModule.world.removeCollider(collider, true);
 
-        // Update props with new scale
-        let newProps = { ...currentProps };
-        if (shape === 'cube') {
-            newProps.halfWidth = (currentProps.halfWidth || 0.5) * scale.x;
-            newProps.halfHeight = (currentProps.halfHeight || 0.5) * scale.y;
-            newProps.halfDepth = (currentProps.halfDepth || 0.5) * scale.z;
-        } else if (shape === 'sphere') {
-            newProps.radius = (currentProps.radius || 0.5) * scale.x;
-        } else if (shape === 'capsule') {
-            newProps.radius = (currentProps.radius || 0.5) * scale.x;
-            newProps.height = (currentProps.height || 1.0) * scale.y;
-        }
-
-        const newCollider = physicsModule.createCollider(shape, body, newProps);
+        const newCollider = physicsModule.createCollider(shape, body, props);
         return newCollider.handle;
     }
 }

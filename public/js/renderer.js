@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import AppGUI from './AppGUI.js';
-
 
 const BASE_URL = 'http://127.0.0.1:3005';
 const API_URL = `${BASE_URL}/api`;
@@ -43,9 +43,10 @@ class Renderer {
         this.uiElements = new Map(); // id -> HTMLElement
         this.uiOverlay = this.createUIOverlay();
         
-        // Gizmo Debug Rendering
+        // Gizmo Debug Rendering & Transform Tool
         this.debugLines = null;
         this.gizmosEnabled = localStorage.getItem('gizmosEnabled') !== 'false'; // Default to true
+        this.transformGizmo = null;
         this.appGui = new AppGUI(this);
 
         // Console UI
@@ -85,16 +86,115 @@ class Renderer {
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enableDamping = true;
 
+        // Transform Gizmo
+        this.transformGizmo = new TransformControls(this.camera, this.renderer.domElement);
+        this.isGizmoDragging = false;
+        this.transformGizmo.addEventListener('dragging-changed', async (e) => {
+            this.isGizmoDragging = e.value;
+            this.controls.enabled = !this.isGizmoDragging;
+            
+            const mesh = this.transformGizmo.object;
+            if (mesh && this.selectedId) {
+                if (this.isGizmoDragging) {
+                    // Save original type and switch to kinematic
+                    try {
+                        const res = await fetch(`${API_URL}/gameobjects/${this.selectedId}`);
+                        const json = await res.json();
+                        if (json.data) mesh.userData.originalPhysicsType = json.data.physics.type;
+                        
+                        await fetch(`${API_URL}/gameobjects/${this.selectedId}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ physics: { type: 'kinematic' } })
+                        });
+                    } catch (e) {}
+                } else {
+                    // Restore original type
+                    const type = mesh.userData.originalPhysicsType || 'dynamic';
+                    await fetch(`${API_URL}/gameobjects/${this.selectedId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            physics: { type: type },
+                            position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+                            rotation: { x: mesh.quaternion.x, y: mesh.quaternion.y, z: mesh.quaternion.z, w: mesh.quaternion.w },
+                            scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z }
+                        })
+                    });
+                }
+            }
+        });
+        this.transformGizmo.addEventListener('change', () => {
+            if (this.transformGizmo.object && this.selectedId) {
+                this.onGizmoUpdate();
+            }
+        });
+        this.scene.add(this.transformGizmo);
+
         // Event listeners
         window.addEventListener('resize', () => this.onResize());
-        document.getElementById('add-go').addEventListener('click', () => this.addPrimitive());
         
         const gizmoToggle = document.getElementById('gizmo-toggle');
         gizmoToggle.checked = this.gizmosEnabled;
         gizmoToggle.addEventListener('change', (e) => this.toggleGizmos(e.target.checked));
         
+        // Spawn Panel Listeners
+        document.querySelectorAll('.spawn-item').forEach(item => {
+            item.onclick = (e) => {
+                const type = e.target.dataset.type;
+                const collider = e.target.dataset.collider;
+                if (type) this.addPrimitive(type);
+                if (collider) this.addCollider(collider);
+            };
+        });
+
+        // Tab Switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+                btn.classList.add('active');
+                const tab = btn.dataset.tab;
+                document.getElementById(`${tab}-list`).classList.remove('hidden');
+                if (tab === 'models') this.refreshModelsList();
+            };
+        });
+
+        // Raycasting for selection
+        this.renderer.domElement.addEventListener('mousedown', (e) => {
+            if (e.button === 0) { // Left click
+                this.handleMouseClick(e);
+            }
+        });
+
+        // Transform Tools Listeners
+        const toolBtns = {
+            'translate': document.getElementById('tool-translate'),
+            'rotate': document.getElementById('tool-rotate'),
+            'scale': document.getElementById('tool-scale')
+        };
+        
+        const setGizmoMode = (mode) => {
+            this.transformGizmo.setMode(mode);
+            Object.values(toolBtns).forEach(b => b.classList.remove('active'));
+            if (toolBtns[mode]) toolBtns[mode].classList.add('active');
+        };
+
+        toolBtns['translate'].onclick = () => setGizmoMode('translate');
+        toolBtns['rotate'].onclick = () => setGizmoMode('rotate');
+        toolBtns['scale'].onclick = () => setGizmoMode('scale');
+
         // Input events
-        window.addEventListener('keydown', (e) => { this.keys.add(e.code); this.sendInput(); });
+        window.addEventListener('keydown', (e) => { 
+            this.keys.add(e.code); 
+            this.sendInput(); 
+            
+            // Gizmo Shortcuts
+            if (e.code === 'KeyW') setGizmoMode('translate');
+            if (e.code === 'KeyE') setGizmoMode('rotate');
+            if (e.code === 'KeyR') setGizmoMode('scale');
+            if (e.code === 'Delete' && this.selectedId) this.deleteGameObject(this.selectedId);
+        });
         window.addEventListener('keyup', (e) => { this.keys.delete(e.code); this.sendInput(); });
         window.addEventListener('mousedown', (e) => { this.mouse.buttons.add(e.button); this.sendInput(); });
         window.addEventListener('mouseup', (e) => { this.mouse.buttons.delete(e.button); this.sendInput(); });
@@ -107,13 +207,51 @@ class Renderer {
 
         // Shortcuts
         window.addEventListener('keydown', (e) => {
+            // Don't trigger shortcuts if typing in an input
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+                return;
+            }
+
             if (e.ctrlKey && e.key === 's') {
-                // Don't save if typing in an input
-                if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
-                    return;
-                }
                 e.preventDefault();
                 this.appGui.saveCurrentScene();
+            }
+
+            if (e.code === 'KeyF' || e.key === 'f') {
+                if (this.selectedId) {
+                    const mesh = this.meshMap.get(this.selectedId);
+                    if (mesh) {
+                        // Focus the camera on the mesh
+                        const box = new THREE.Box3().setFromObject(mesh);
+                        const center = box.getCenter(new THREE.Vector3());
+                        const size = box.getSize(new THREE.Vector3());
+                        
+                        this.controls.target.copy(center);
+                        
+                        // Move camera back a bit based on object size
+                        const maxDim = Math.max(size.x, size.y, size.z);
+                        // Unity style framing: 
+                        const fov = this.camera.fov * (Math.PI / 180);
+                        const aspect = this.camera.aspect;
+                        
+                        // Calculate distance to fit the bounding box
+                        let distance = (maxDim / 2) / Math.tan(fov / 2);
+                        // Padding factor
+                        distance *= 1.5; 
+
+                        if (distance === 0 || isNaN(distance)) distance = 5;
+                        
+                        const direction = new THREE.Vector3().subVectors(this.camera.position, center);
+                        if (direction.lengthSq() < 0.0001) {
+                            direction.set(0, 0, 1);
+                        } else {
+                            direction.normalize();
+                        }
+                        
+                        this.camera.position.copy(center).add(direction.multiplyScalar(distance));
+                        this.controls.update();
+                    }
+                }
             }
         });
 
@@ -183,14 +321,141 @@ class Renderer {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 name: `Primitive ${type}`,
-                position: { x: (Math.random() - 0.5) * 5, y: 5, z: (Math.random() - 0.5) * 5 },
+                position: { x: 0, y: 5, z: 0 },
                 primitive: type,
                 type: 'dynamic'
             })
         });
-        const response = await res.json();
-        const go = response.data;
-        this.createMeshForGO(go);
+        this.refreshHierarchy();
+    }
+
+    async addModel(modelName) {
+        const res = await fetch(`${API_URL}/gameobjects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: modelName.split('.')[0],
+                position: { x: 0, y: 5, z: 0 },
+                modelUrl: modelName,
+                type: 'dynamic'
+            })
+        });
+        this.refreshHierarchy();
+    }
+
+    async addCollider(type = 'cube') {
+        const res = await fetch(`${API_URL}/gameobjects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: `Collider ${type}`,
+                position: { x: 0, y: 5, z: 0 },
+                primitive: type,
+                type: 'dynamic',
+                mesh: { visible: false } // Only collider, no mesh
+            })
+        });
+        this.refreshHierarchy();
+    }
+
+    async refreshModelsList() {
+        const list = document.getElementById('models-list');
+        list.innerHTML = '<p class="empty-msg">Scanning assets...</p>';
+        try {
+            const res = await fetch(`${API_URL}/assets/models`);
+            const json = await res.json();
+            if (json.status === 'success' && json.data.length > 0) {
+                list.innerHTML = '';
+                json.data.forEach(model => {
+                    const div = document.createElement('div');
+                    div.className = 'spawn-item';
+                    div.innerText = model.name;
+                    div.onclick = () => this.addModel(model.name);
+                    list.appendChild(div);
+                });
+            } else {
+                list.innerHTML = '<p class="empty-msg">No models found in assets/</p>';
+            }
+        } catch (e) {
+            list.innerHTML = '<p class="empty-msg">Error loading models</p>';
+        }
+    }
+
+    handleMouseClick(event) {
+        // Raycast logic
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const container = document.getElementById('viewport');
+        const rect = container.getBoundingClientRect();
+
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        if (this.isGizmoDragging) return;
+
+        raycaster.setFromCamera(mouse, this.camera);
+        const intersects = raycaster.intersectObjects(this.scene.children, true);
+
+        // check if we hit the gizmo first
+        for (let i = 0; i < intersects.length; i++) {
+            let obj = intersects[i].object;
+            let isGizmo = false;
+            let curr = obj;
+            while(curr) {
+                if (curr.isTransformControls || curr.name.includes("gizmo") || curr.type === "TransformControlsPlane" || curr.userData.isGizmo) {
+                    isGizmo = true;
+                    break;
+                }
+                curr = curr.parent;
+            }
+            if (isGizmo) return; 
+            break; 
+        }
+
+        // Filter out helper objects and gizmos for selection
+        const validIntersects = intersects.filter(i => {
+            let obj = i.object;
+            while(obj) {
+                if (obj.isTransformControls || obj.isGridHelper || obj.isLineSegments || obj.type === "TransformControlsPlane") return false;
+                obj = obj.parent;
+            }
+            return true;
+        });
+
+        if (validIntersects.length > 0) {
+            let target = validIntersects[0].object;
+            let goId = null;
+            
+            for (const [id, mesh] of this.meshMap) {
+                let curr = target;
+                while (curr) {
+                    if (curr === mesh) {
+                        goId = id;
+                        break;
+                    }
+                    curr = curr.parent;
+                }
+                if (goId) break;
+            }
+
+            if (goId) {
+                this.selectGameObject(goId);
+            } else {
+                this.selectGameObject(null);
+            }
+        } else {
+            this.selectGameObject(null);
+        }
+    }
+
+    async deleteGameObject(id) {
+        await fetch(`${API_URL}/gameobjects/${id}`, { method: 'DELETE' });
+        const mesh = this.meshMap.get(id);
+        if (mesh) {
+            this.scene.remove(mesh);
+            this.meshMap.delete(id);
+        }
+        if (this.selectedId === id) this.selectGameObject(null);
         this.refreshHierarchy();
     }
 
@@ -325,28 +590,174 @@ class Renderer {
         this.selectedId = id;
         this.refreshHierarchy();
         this.updateInspector(id);
+        
+        // Attachment
+        const mesh = id ? this.meshMap.get(id) : null;
+        if (mesh) {
+            this.transformGizmo.attach(mesh);
+        } else {
+            this.transformGizmo.detach();
+        }
+    }
+
+    async onGizmoUpdate() {
+        const mesh = this.transformGizmo.object;
+        if (!mesh || !this.selectedId) return;
+
+        // Sync with server
+        await this.updateTransform(this.selectedId, {
+            position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+            rotation: { x: mesh.quaternion.x, y: mesh.quaternion.y, z: mesh.quaternion.z, w: mesh.quaternion.w },
+            scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z }
+        });
+        
+        // Refresh Inspector ONLY if not dragging to avoid jumping
+        // But since we want live feedback, we can update specific fields
+        this.updateInspectorFields(mesh);
+    }
+
+    async updateTransform(id, transform) {
+        await fetch(`${API_URL}/gameobjects/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(transform)
+        });
+    }
+
+    updateInspectorFields(mesh) {
+        const px = document.getElementById('prop-pos-x');
+        const py = document.getElementById('prop-pos-y');
+        const pz = document.getElementById('prop-pos-z');
+        if (px) {
+            px.value = mesh.position.x.toFixed(3);
+            py.value = mesh.position.y.toFixed(3);
+            pz.value = mesh.position.z.toFixed(3);
+        }
+        
+        const rx = document.getElementById('prop-rot-x');
+        const ry = document.getElementById('prop-rot-y');
+        const rz = document.getElementById('prop-rot-z');
+        if (rx) {
+            const euler = new THREE.Euler().setFromQuaternion(mesh.quaternion);
+            rx.value = THREE.MathUtils.radToDeg(euler.x).toFixed(1);
+            ry.value = THREE.MathUtils.radToDeg(euler.y).toFixed(1);
+            rz.value = THREE.MathUtils.radToDeg(euler.z).toFixed(1);
+        }
+
+        const sx = document.getElementById('prop-scale-x');
+        const sy = document.getElementById('prop-scale-y');
+        const sz = document.getElementById('prop-scale-z');
+        if (sx) {
+            sx.value = mesh.scale.x.toFixed(3);
+            sy.value = mesh.scale.y.toFixed(3);
+            sz.value = mesh.scale.z.toFixed(3);
+        }
     }
 
     async updateInspector(id) {
+        if (!id) {
+            document.getElementById('inspector-content').innerHTML = '<p class="empty-msg">Select an object to see properties</p>';
+            return;
+        }
+
         const res = await fetch(`${API_URL}/gameobjects/${id}`);
         const response = await res.json();
         const go = response.data;
         const content = document.getElementById('inspector-content');
         
+        const mesh = this.meshMap.get(id);
+        const pos = mesh ? mesh.position : go.physics.position;
+        const scale = go.mesh.scale || { x: 1, y: 1, z: 1 };
+        const euler = mesh ? new THREE.Euler().setFromQuaternion(mesh.quaternion) : new THREE.Euler();
+
         content.innerHTML = `
             <div class="prop-group">
                 <label>Name</label>
-                <input type="text" value="${go.name}" readonly>
+                <input type="text" value="${go.name}" id="prop-name">
             </div>
+            
+            <div class="prop-group">
+                <label>Position</label>
+                <div class="transform-row">
+                    <div class="vec-input"><span>X</span><input type="number" step="0.1" value="${pos.x.toFixed(3)}" id="prop-pos-x"></div>
+                    <div class="vec-input"><span>Y</span><input type="number" step="0.1" value="${pos.y.toFixed(3)}" id="prop-pos-y"></div>
+                    <div class="vec-input"><span>Z</span><input type="number" step="0.1" value="${pos.z.toFixed(3)}" id="prop-pos-z"></div>
+                </div>
+            </div>
+
+            <div class="prop-group">
+                <label>Rotation</label>
+                <div class="transform-row">
+                    <div class="vec-input"><span>X</span><input type="number" step="1" value="${THREE.MathUtils.radToDeg(euler.x).toFixed(1)}" id="prop-rot-x"></div>
+                    <div class="vec-input"><span>Y</span><input type="number" step="1" value="${THREE.MathUtils.radToDeg(euler.y).toFixed(1)}" id="prop-rot-y"></div>
+                    <div class="vec-input"><span>Z</span><input type="number" step="1" value="${THREE.MathUtils.radToDeg(euler.z).toFixed(1)}" id="prop-rot-z"></div>
+                </div>
+            </div>
+
+            <div class="prop-group">
+                <label>Scale</label>
+                <div class="transform-row">
+                    <div class="vec-input"><span>X</span><input type="number" step="0.1" value="${scale.x.toFixed(3)}" id="prop-scale-x"></div>
+                    <div class="vec-input"><span>Y</span><input type="number" step="0.1" value="${scale.y.toFixed(3)}" id="prop-scale-y"></div>
+                    <div class="vec-input"><span>Z</span><input type="number" step="0.1" value="${scale.z.toFixed(3)}" id="prop-scale-z"></div>
+                </div>
+            </div>
+
             <div class="prop-group">
                 <label>Physics Type</label>
-                <span>${go.physics.type}</span>
-            </div>
-            <div class="prop-group">
-                <label>Primitive</label>
-                <span>${go.mesh.primitive}</span>
+                <select id="prop-type">
+                    <option value="dynamic" ${go.physics.type === 'dynamic' ? 'selected' : ''}>Dynamic</option>
+                    <option value="static" ${go.physics.type === 'static' ? 'selected' : ''}>Static</option>
+                    <option value="kinematic" ${go.physics.type === 'kinematic' ? 'selected' : ''}>Kinematic</option>
+                </select>
             </div>
         `;
+
+        // Event listeners for inspector inputs
+        const updateFromProps = () => {
+            const name = document.getElementById('prop-name').value;
+            const type = document.getElementById('prop-type').value;
+            const position = {
+                x: parseFloat(document.getElementById('prop-pos-x').value),
+                y: parseFloat(document.getElementById('prop-pos-y').value),
+                z: parseFloat(document.getElementById('prop-pos-z').value)
+            };
+            const rotationDeg = {
+                x: parseFloat(document.getElementById('prop-rot-x').value),
+                y: parseFloat(document.getElementById('prop-rot-y').value),
+                z: parseFloat(document.getElementById('prop-rot-z').value)
+            };
+            const scale = {
+                x: parseFloat(document.getElementById('prop-scale-x').value),
+                y: parseFloat(document.getElementById('prop-scale-y').value),
+                z: parseFloat(document.getElementById('prop-scale-z').value)
+            };
+
+            const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(
+                THREE.MathUtils.degToRad(rotationDeg.x),
+                THREE.MathUtils.degToRad(rotationDeg.y),
+                THREE.MathUtils.degToRad(rotationDeg.z)
+            ));
+
+            this.updateTransform(id, {
+                name,
+                physics: { type },
+                position,
+                rotation: { x: q.x, y: q.y, z: q.z, w: q.w },
+                scale
+            });
+
+            // Update mesh locally for immediate feedback
+            if (mesh) {
+                mesh.position.set(position.x, position.y, position.z);
+                mesh.quaternion.copy(q);
+                mesh.scale.set(scale.x, scale.y, scale.z);
+            }
+        };
+
+        content.querySelectorAll('input, select').forEach(input => {
+            input.onchange = updateFromProps;
+        });
     }
 
     async syncPhysics() {
@@ -405,8 +816,13 @@ class Renderer {
                 states.forEach(state => {
                     const mesh = this.meshMap.get(state.id);
                     if (mesh) {
-                        mesh.userData.targetPosition = new THREE.Vector3(state.position.x, state.position.y, state.position.z);
-                        mesh.userData.targetRotation = new THREE.Quaternion(state.rotation.x, state.rotation.y, state.rotation.z, state.rotation.w);
+                        // Skip sync for the object being manipulated by the gizmo to avoid jitter
+                        const isBeingManipulated = this.transformGizmo.object === mesh && this.isGizmoDragging;
+                        
+                        if (!isBeingManipulated) {
+                            mesh.userData.targetPosition = new THREE.Vector3(state.position.x, state.position.y, state.position.z);
+                            mesh.userData.targetRotation = new THREE.Quaternion(state.rotation.x, state.rotation.y, state.rotation.z, state.rotation.w);
+                        }
                         
                         // Sync scale if it changed
                         if (state.scale) {
@@ -498,7 +914,10 @@ class Renderer {
     syncCamera(cameraData) {
         this.activeCameraData = cameraData.cameras.find(c => c.id === cameraData.activeCameraId);
         
-        if (!this.activeCameraData || this.activeCameraData.type === 'orbit') {
+        // Respect Gizmo drag first
+        if (this.isGizmoDragging) {
+            this.controls.enabled = false;
+        } else if (!this.activeCameraData || this.activeCameraData.type === 'orbit') {
             this.controls.enabled = true;
         } else {
             this.controls.enabled = false;
@@ -591,12 +1010,21 @@ class Renderer {
         const lerpFactor = 0.15; // Smoothness factor
 
         this.meshMap.forEach(mesh => {
-            // Smoothly interpolate towards physics position/rotation
-            if (mesh.userData.targetPosition) {
-                mesh.position.lerp(mesh.userData.targetPosition, lerpFactor);
-            }
-            if (mesh.userData.targetRotation) {
-                mesh.quaternion.slerp(mesh.userData.targetRotation, lerpFactor);
+            // CRITICAL: If this object is being moved by the gizmo, DO NOT interpolate
+            const isBeingManipulated = this.transformGizmo.object === mesh && this.isGizmoDragging;
+            
+            if (!isBeingManipulated) {
+                // Smoothly interpolate towards physics position/rotation
+                if (mesh.userData.targetPosition) {
+                    mesh.position.lerp(mesh.userData.targetPosition, lerpFactor);
+                }
+                if (mesh.userData.targetRotation) {
+                    mesh.quaternion.slerp(mesh.userData.targetRotation, lerpFactor);
+                }
+            } else {
+                // Clear targets while manipulating to prevent a "pop" when releasing
+                mesh.userData.targetPosition = null;
+                mesh.userData.targetRotation = null;
             }
 
             // Update animation mixer

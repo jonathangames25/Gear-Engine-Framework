@@ -147,23 +147,156 @@ header h1 {
     color: var(--text-secondary);
 }
 
-#inspector {
-    height: 250px;
+/* Spawn Panel */
+#spawn-panel {
     border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+}
+
+.spawn-tabs {
+    display: flex;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 4px;
+    gap: 4px;
+}
+
+.tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 6px;
+    font-size: 0.7rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.tab-btn.active {
+    background: var(--bg-hover);
+    color: var(--accent);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.tab-content {
+    padding: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.tab-content.hidden {
+    display: none;
+}
+
+.spawn-item {
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.1s, border-color 0.2s;
+}
+
+.spawn-item:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+.spawn-item:active {
+    transform: scale(0.95);
+}
+
+/* Inspector */
+#inspector {
+    flex: 1;
+    min-height: 300px;
+    border-top: 1px solid var(--border);
+    overflow-y: auto;
 }
 
 #inspector-content {
-    padding: 20px;
+    padding: 15px;
     font-size: 0.85rem;
 }
 
-.empty-msg {
-    color: var(--text-secondary);
-    font-style: italic;
-    text-align: center;
+.prop-group {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
-/* Viewport */
+.prop-group label {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.prop-group input[type="text"],
+.prop-group input[type="number"] {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 8px;
+    border-radius: 4px;
+    outline: none;
+    width: 100%;
+}
+
+.prop-group select {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 8px;
+    border-radius: 4px;
+    outline: none;
+}
+
+.transform-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+}
+
+.vec-input {
+    display: flex;
+    align-items: center;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.vec-input span {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 6px 8px;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    border-right: 1px solid var(--border);
+}
+
+.vec-input input {
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    width: 100%;
+    padding: 6px;
+    font-size: 0.8rem;
+    outline: none;
+}
+
 #viewport-container {
     flex: 1;
     position: relative;
@@ -192,6 +325,44 @@ header h1 {
     gap: 20px;
     font-size: 0.8rem;
     color: var(--text-primary);
+}
+
+#transform-tools {
+    margin-top: 15px;
+    display: flex;
+    gap: 5px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    padding: 5px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    width: fit-content;
+    pointer-events: auto;
+}
+
+#transform-tools button {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    transition: all 0.2s;
+}
+
+#transform-tools button:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+#transform-tools button.active {
+    background: var(--accent);
+    color: white;
 }
 
 #physics-status {
@@ -234,12 +405,12 @@ header h1 {
     width: 450px;
     max-height: 80vh;
     overflow-y: auto;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
 }
 
 .modal-content header {
     padding: 15px 20px;
-    background: rgba(255,255,255,0.02);
+    background: rgba(255, 255, 255, 0.02);
 }
 
 .modal-content h2 {
@@ -268,7 +439,7 @@ header h1 {
 
 .scene-item {
     padding: 12px 15px;
-    background: rgba(255,255,255,0.03);
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--border);
     border-radius: 8px;
     cursor: pointer;
@@ -331,7 +502,7 @@ header h1 {
 #ui-overlay span {
     font-size: 0.9rem;
     color: var(--text-primary);
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 #ui-overlay div {
@@ -374,7 +545,7 @@ header h1 {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
-    background: rgba(0,0,0,0.2);
+    background: rgba(0, 0, 0, 0.2);
 }
 
 .prompt-actions button {
